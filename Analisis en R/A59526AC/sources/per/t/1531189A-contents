@@ -1,0 +1,173 @@
+# Carga y limpieza de los datos
+## Carga de las librerias
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(here)
+library(stringr)
+
+ruta_BD_Netflix <- "C:\\hidden-gems\\Hidden-Gems\\Data\\netflix_dataset.csv"
+
+##Cargar el dataset
+
+netflix<- read_csv(ruta_BD_Netflix)
+
+# Cambios basicos y Presentacion
+
+##Mostrar las primeras 6 filas
+
+print(netflix, 6)
+
+spec(netflix)
+
+# Cambiar titulos al español
+
+netflix1 <- netflix %>%
+  rename(
+    ID = id,
+    Titulos_producciones = title,
+    Tipos = type,
+    Descripcion = description, 
+    Año_Lanzamiento = release_year,
+    Certificacion_edad = age_certification,
+    Tiempo = runtime,
+    Generos = genres,
+    Paises_produccion = production_countries,
+    Temporadas = seasons,
+    imdb_ID = imdb_id,
+    imdb_votos = imdb_votes,
+    tmdb_popularidad = tmdb_popularity,
+    tmdb_puntaje = tmdb_score
+  ) 
+  
+print(names(netflix1))
+
+
+#Visualizar la data
+
+glimpse(netflix)
+summary(netflix)
+
+###Visualizacion de valores faltantes
+  
+columnas_esenciales <- c("tmdb_score", "imdb_votes", "imdb_id", "imdb_score", "age_certification")
+df_clean <- netflix %>% filter(if_all(all_of(columnas_esenciales), ~!is.na(.)))
+
+
+###Chequeo de duplicados 
+
+duplicados_totales <- sum(duplicated(netflix1))
+print(paste ("Numero de filas duplicadas:", duplicados_totales))
+
+
+###Chequeo de dupicados por titulo
+
+duplicados_titulos<- netflix1 %>%
+  group_by(Titulos_producciones)%>%
+  summarise( Conteo=n(), .groups = "drop")%>%
+  filter(Conteo > 1) %>%
+  nrow()
+
+print (paste("Titulos duplicados:", duplicados_titulos))
+
+#Manejo de valores faltantes
+
+##Para la clasificacion de edad pondremos como " no clasificados" lo valores NA
+netflix_limpio <-netflix1 %>%
+  mutate(
+    Certificacion_edad = case_when(
+      is.na(Certificacion_edad)~"No Clasificado", 
+      TRUE ~ Certificacion_edad)
+  )
+
+##Para la descripcion cambiar los datos NA como "no disponibles"
+
+netflix_limpio <-netflix_limpio %>%
+  mutate(
+    Descripcion = case_when(
+      is.na(Descripcion)~"No disponible", 
+      TRUE ~ Descripcion)
+  )
+##Para los ID , Score y votos de la pagina imdb que aparezcan en NA, se reemplazan con "Desconocido"
+netflix_limpio <-netflix_limpio %>%
+  mutate(
+    imdb_ID = case_when(
+      is.na(imdb-ID)~"No disponible", 
+      TRUE ~ imdb_ID)
+  )
+
+
+##Para los numericos se reemplazaran los datos NA por la mediana
+##Runtime  !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+netflix_limpio <- netflix_limpio %>%
+  Tiempo= ifelse (is.na(Tiempo), median(Tiempo, na.rm = TRUE), Tiempo)
+
+#Seasons, como los valores Na de esa categoria significa que es una Pelicula, entonces cambiaremos el valor NA por 0
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   netflix_limpio <-netflix_limpio %>%
+  mutate(
+   Temporadas  = case_when(
+      is.na(Temporadas)~"0", 
+      TRUE ~ Temporadas)
+  )
+
+
+print("NAs después de imputación:")
+print(colSums(is.na(netflix_limpio)))
+      
+#Eliminacion de duplicados
+
+netflix_limpio <- netflix_limpio %>%
+  distinct() 
+
+netflix_limpio <- netflix_limpio %>%
+  distinct(Titulos_producciones, .keep_all = TRUE)  
+
+print(paste("Filas después de eliminar duplicados:", nrow(netflix_limpio)))
+
+
+#Limpieza de datos atipicos
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    #Filtrar años invalidos
+    Año_Lanzamiento = case_when(
+      Año_Lanzamiento < 1900 | Año_Lanzamiento > 2025 ~ NA_real_,
+      TRUE ~ Año_Lanzamiento
+    ),
+    # Filtrar tiempos de reproduccion incongruentes 
+    Tiempo = case_when(
+      Tiempo < 1 | Tiempo > 600 ~ NA_real_, 
+      TRUE ~ Tiempo
+    ),
+    #puntajes 
+    tmdb_puntaje = pmax(0, pmin(10, tmdb_puntaje))
+  ) %>%
+  # Convertir a integer donde sea lógico (ej. años, temporadas)
+  mutate(
+    Año_Lanzamiento = as.integer(Año_Lanzamiento),
+    Temporadas = as.integer(Temporadas)
+  )
+#Limpiar String con comas y doble espacios
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Generos = str_trim(str_replace_all(Generos, ",\\s+", ", ")),  
+         Paises_produccion = str_trim(str_replace_all(Paises_produccion, ",\\s+", ", "))
+  )
+
+ 
+##Crear columnas para los generos
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Generos_Lista = str_split(Generos, ",\\s*") 
+  )
+
+
+#Resumen final
+
+glimpse(netflix_limpio)
+print("NAs finales:")
+print(colSums(is.na(netflix_limpio))

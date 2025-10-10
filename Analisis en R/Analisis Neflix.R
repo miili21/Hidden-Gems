@@ -8,7 +8,7 @@ library(tidyr)
 library(here)
 library(stringr)
 
-ruta_BD_Netflix <- "C:\\Users\\Usuario\\Documents\\GitHub\\Hidden-Gems\\Data\\netflix_dataset.csv"
+ruta_BD_Netflix <- "C:\\Users\\3340\\OneDrive\\Escritorio\\UCV\\Sem 1\\COMPU 1\\Proyecto\\1111111\\Hidden-Gems\\Data\\netflix_dataset.csv"
 
 ##Cargar el dataset
 
@@ -52,8 +52,10 @@ summary(netflix)
 ###Visualización de valores faltantes
   
 columnas_escenciales <- c("tmdb_score", "imdb_votes", "imdb_id", "imdb_score", "age_certification")
-df_clean <- netflix %>% filter(if_all(all_of(columnas_esenciales), ~!is.na(.)))
 
+df_clean <- netflix %>% filter(if_all(all_of(columnas_escenciales), ~!is.na(.)))
+
+View(df_clean)
 
 ###Chequeo de duplicados 
 
@@ -93,11 +95,11 @@ netflix_limpio <-netflix_limpio %>%
 ###Se reemplazan con "Desconocido" los ID , Score, votos, popularidad de las paginas imdb y tmbd que aparezcan en NA
 netflix_limpio <- netflix_limpio %>%
   mutate(
-    tmdb_popularidad = ifelse(is.na(tmdb_popularidad), "desconocido", as.character(tmdb_popularidad)),
-    tmdb_puntaje = ifelse(is.na(tmdb_puntaje), "desconocido", as.character(tmdb_puntaje)),
-    imdb_score = ifelse(is.na(imdb_score), "desconocido", as.character(imdb_score)),
-    imdb_votos = ifelse(is.na(imdb_votos), "desconocido", as.character(imdb_votos)),
-    imdb_ID = ifelse(is.na(imdb_ID), "desconocido", imdb_ID),  
+    tmdb_popularidad = ifelse(is.na(tmdb_popularidad), 0, tmdb_popularidad),
+    tmdb_puntaje = ifelse(is.na(tmdb_puntaje), 0, tmdb_puntaje) ,
+    imdb_score = ifelse(is.na(imdb_score), 0, imdb_score) ,
+    imdb_votos = ifelse(is.na(imdb_votos), 0, imdb_votos) ,
+    imdb_ID = ifelse(is.na(imdb_ID), "desconocido",imdb_ID),
   )
 
 
@@ -214,3 +216,189 @@ netflix_tmbd_pelis <- netflix_tmdb %>%
 
 netflix_tmbd_series <- netflix_tmdb %>%
   filter(Tipos == "SHOW")
+
+View(netflix_limpio)
+
+
+# Estadisticas descriptivas de Año de lanzamiento
+
+resumen_netflix_año_lanzamiento <- netflix_limpio %>%
+  summarise(
+    media = mean(Año_Lanzamiento, na.rm = TRUE),
+    mediana = median(Año_Lanzamiento, na.rm = TRUE),
+    desviacion_tipica = sd(Año_Lanzamiento, na.rm = TRUE),
+    minimo = min(Año_Lanzamiento, na.rm = TRUE),
+    maximo = max(Año_Lanzamiento, na.rm = TRUE),
+    cuartil1 = quantile(Año_Lanzamiento, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(Año_Lanzamiento, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(Año_Lanzamiento, 0.75, na.rm = TRUE)
+  )
+
+print(resumen_netflix_año_lanzamiento)
+
+# Estadisticas descriptivas del tiempo
+
+resumen_netflix_tiempo <- netflix_limpio %>%
+  summarise(
+    media = mean(Tiempo, na.rm = TRUE),
+    mediana = median(Tiempo, na.rm = TRUE),
+    desviacion_tipica = sd(Tiempo, na.rm = TRUE),
+    minimo = min(Tiempo, na.rm = TRUE),
+    maximo = max(Tiempo, na.rm = TRUE),
+    cuartil1 = quantile(Tiempo, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(Tiempo, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(Tiempo, 0.75, na.rm = TRUE)
+  )
+
+print(resumen_netflix_tiempo)
+
+# Estadisticas descriptivas del Imdb Score
+
+resumen_netflix_imdb_score <- netflix_limpio %>%
+  summarise(
+    media = mean(imdb_score, na.rm = TRUE),
+    mediana = median(imdb_score, na.rm = TRUE),
+    desviacion_tipica = sd(imdb_score, na.rm = TRUE),
+    minimo = min(imdb_score, na.rm = TRUE),
+    maximo = max(imdb_score, na.rm = TRUE),
+    cuartil1 = quantile(imdb_score, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(imdb_score, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(imdb_score, 0.75, na.rm = TRUE)
+  )
+
+print(resumen_netflix_imdb_score)
+
+
+# Estadisticas descriptivas de Imdb Votes
+
+resumen_netflix_imdb_votos <- netflix_limpio %>%
+  summarise(
+    media = mean(imdb_votos, na.rm = TRUE),
+    mediana = median(imdb_votos, na.rm = TRUE),
+    desviacion_tipica = sd(imdb_votos, na.rm = TRUE),
+    minimo = min(imdb_votos, na.rm = TRUE),
+    maximo = max(imdb_votos, na.rm = TRUE),
+    cuartil1 = quantile(imdb_votos, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(imdb_votos, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(imdb_votos, 0.75, na.rm = TRUE)
+  )
+
+print(resumen_netflix_imdb_votos)
+
+# Estadisticas descriptivas de tmdb Popularidad
+
+resumen_netflix_tmdb_polularidad <- netflix_limpio %>%
+  summarise(
+    media = mean(tmdb_popularidad, na.rm = TRUE),
+    mediana = median(tmdb_popularidad, na.rm = TRUE),
+    desviacion_tipica = sd(tmdb_popularidad, na.rm = TRUE),
+    minimo = min(tmdb_popularidad, na.rm = TRUE),
+    maximo = max(tmdb_popularidad, na.rm = TRUE),
+    cuartil1 = quantile(tmdb_popularidad, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(tmdb_popularidad, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(tmdb_popularidad, 0.75, na.rm = TRUE)
+  )
+
+print(resumen_netflix_tmdb_polularidad)
+
+# Estadisticas descriptivas de tmdb Puntaje
+
+resumen_netflix_tmdb_puntaje <- netflix_limpio %>%
+  summarise(
+    media = mean(tmdb_puntaje, na.rm = TRUE),
+    mediana = median(tmdb_puntaje, na.rm = TRUE),
+    desviacion_tipica = sd(tmdb_puntaje, na.rm = TRUE),
+    minimo = min(tmdb_puntaje, na.rm = TRUE),
+    maximo = max(tmdb_popularidad, na.rm = TRUE),
+    cuartil1 = quantile(tmdb_puntaje, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(tmdb_puntaje, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(tmdb_puntaje, 0.75, na.rm = TRUE)
+  )
+
+print(resumen_netflix_tmdb_puntaje)
+
+
+# Creación de gráfcas para análisis descriptivo
+
+gd <- netflix_limpio 
+
+
+gd1 <- gd %>% summary(gd)
+
+gd2 <- gd %>% 
+  group_by(Generos) %>%
+  summarise(cantidad = n())
+print(gd2)
+
+# Histograma de imdb score
+
+grafico_imdb_score <- ggplot(netflix_limpio, aes(x = imdb_score)) +
+  geom_histogram(
+    bins  = 30,           # número de bins
+    fill  = "brown", # color de relleno
+    color = "black",      # color del borde
+    alpha = 0.7           # transparencia
+  ) +
+  labs(
+    title = "Histograma imdb score",
+    x     = "imdb score",
+    y     = "Frecuencia" 
+  ) + 
+  theme_minimal()
+
+print(grafico_imdb_score)
+
+
+# Histograma de imdb votos
+
+grafico_votos <- ggplot(netflix_limpio, aes(x = imdb_votos)) +
+  geom_histogram(
+    bins  = 50,           # número de bins
+    fill  = "gold", # color de relleno
+    color = "black",      # color del borde
+    alpha = 0.7           # transparencia
+  ) +
+  labs(
+    title = "Histograma de imdb votos",
+    x     = "imdb votos",
+    y     = "Frecuencia"
+  ) +
+  theme_minimal()
+
+print(grafico_votos)
+
+# Histograma de tmdb popularidad
+
+grafico_popularidad <- ggplot(netflix_limpio, aes(x = tmdb_popularidad)) +
+  geom_histogram(
+    bins  = 30,           # número de bins
+    fill  = "darkred", # color de relleno
+    color = "black",      # color del borde
+    alpha = 0.7           # transparencia
+  ) +
+  labs(
+    title = "Histograma de tmdb popularidad",
+    x     = "imdb popularidad",
+    y     = "Frecuencia"
+  ) +
+  theme_minimal()
+
+print(grafico_popularidad)
+
+# Histograma de tmdb puntaje
+
+grafico_puntaje <- ggplot(netflix_limpio, aes(x = tmdb_puntaje)) +
+  geom_histogram(
+    bins  = 30,           # número de bins
+    fill  = "lightblue", # color de relleno
+    color = "black",      # color del borde
+    alpha = 0.7           # transparencia
+  ) +
+  labs(
+    title = "Histograma de tmdb puntaje",
+    x     = "imdb puntaje",
+    y     = "Frecuencia"
+  ) +
+  theme_minimal()
+
+print(grafico_puntaje)

@@ -8,7 +8,6 @@ library(tidyr)
 library(here)
 library(stringr)
 
-ruta_BD_Netflix <- "C:\\Users\\3340\\OneDrive\\Escritorio\\UCV\\Sem 1\\COMPU 1\\Proyecto\\1111111\\Hidden-Gems\\Data\\netflix_dataset.csv"
 
 ##Cargar el dataset
 
@@ -49,14 +48,6 @@ print(names(netflix1))
 glimpse(netflix)
 summary(netflix)
 
-###Visualización de valores faltantes
-  
-columnas_escenciales <- c("tmdb_score", "imdb_votes", "imdb_id", "imdb_score", "age_certification")
-
-df_clean <- netflix %>% filter(if_all(all_of(columnas_escenciales), ~!is.na(.)))
-
-View(df_clean)
-
 ###Chequeo de duplicados 
 
 duplicados_totales <- sum(duplicated(netflix1))
@@ -92,14 +83,14 @@ netflix_limpio <-netflix_limpio %>%
       TRUE ~ Descripcion)
   )
 
-###Se reemplazan con "Desconocido" los ID , Score, votos, popularidad de las paginas imdb y tmbd que aparezcan en NA
+###Se reemplazan con "0" los ID , Score, votos, popularidad de las paginas imdb y tmbd que aparezcan en NA
 netflix_limpio <- netflix_limpio %>%
   mutate(
     tmdb_popularidad = ifelse(is.na(tmdb_popularidad), 0, tmdb_popularidad),
     tmdb_puntaje = ifelse(is.na(tmdb_puntaje), 0, tmdb_puntaje) ,
     imdb_score = ifelse(is.na(imdb_score), 0, imdb_score) ,
     imdb_votos = ifelse(is.na(imdb_votos), 0, imdb_votos) ,
-    imdb_ID = ifelse(is.na(imdb_ID), "desconocido",imdb_ID),
+    imdb_ID = ifelse(is.na(imdb_ID), "desconocido",imdb_ID)
   )
 
 
@@ -111,7 +102,7 @@ netflix_limpio <- netflix_limpio %>%
 
 #Borramos los titulos faltantes de la data
   
-  netflix_limpio <- netflix_limpio %>%
+netflix_limpio <- netflix_limpio %>%
     filter(!is.na(Titulos_producciones))
 
 print("NAs después de imputación:")
@@ -120,36 +111,26 @@ print(colSums(is.na(netflix_limpio)))
 #Eliminación de duplicados
 
 netflix_limpio <- netflix_limpio %>%
-  distinct() 
-
-netflix_limpio <- netflix_limpio %>%
   distinct(Titulos_producciones, .keep_all = TRUE)  
 
 print(paste("Filas después de eliminar duplicados:", nrow(netflix_limpio)))
 
 
-#Limpieza de datos atipicos
+#Limpieza de datos 
 
 netflix_limpio <- netflix_limpio %>%
   mutate(
     #Filtrar años inválidos
     Año_Lanzamiento = case_when(
-      Año_Lanzamiento < 1900 | Año_Lanzamiento > 2025 ~ NA_real_,
+      Año_Lanzamiento < 1700 | Año_Lanzamiento > 2025 ~ NA_real_,
       TRUE ~ Año_Lanzamiento
     ),
     # Filtrar tiempos de reproducción incongruentes 
     Tiempo = case_when(
       Tiempo < 1 | Tiempo > 300 ~ NA_real_, 
       TRUE ~ Tiempo
-    ),
-    #puntajes 
-    tmdb_puntaje = pmax(0, pmin(10, tmdb_puntaje))
-  ) %>%
-  # Convertir a integer donde sea lógico, es decir, Año y Temporadas
-  mutate(
-    Año_Lanzamiento = as.integer(Año_Lanzamiento),
-    Temporadas = as.integer(Temporadas)
-  )
+    ))
+
 #Limpiar String con comas y doble espacios
 
 netflix_limpio <- netflix_limpio %>%
@@ -165,6 +146,123 @@ netflix_limpio <- netflix_limpio %>%
     Generos_Lista = str_split(Generos, ",\\s*") 
   )
 
+netflix_limpio <- netflix_limpio %>%
+  separate_rows(Generos, sep = ",\\s*")
+
+
+#prueba
+
+str(netflix_limpio)
+glimpse (netflix_limpio)
+
+#Quitar outliers popularidad
+##Resumen
+print (summary(netflix_limpio$tmdb_popularidad))
+#Ver como esta antes del filtrado
+p1 <- ggplot(netflix_limpio, aes(y = tmdb_popularidad))+
+  geom_boxplot (fill= "#6BAED6", alpha = 0.6)+
+  labs(title = "Deteccion de valores atipicos en tmdb_popularidad (ANTES)",
+       y = "popularidad (tmdb)")+
+  theme_minimal()
+print(p1)
+
+#Conteo de outliers
+Q1 <- quantile(netflix_limpio$tmdb_popularidad, probs = 0.25, na.rm = TRUE)
+
+Q3 <- quantile(netflix_limpio$tmdb_popularidad, probs = 0.75, na.rm = TRUE)
+
+Rango<-Q3-Q1
+
+##Definir limites
+
+limite_inferior<-Q1-1.5*Rango
+limite_superior<-Q3+1.5*Rango
+
+print(Q1)
+print(Q3)
+print(paste("Rango:", round(Rango, 2)))
+print(paste("Límite inferior:", round(limite_inferior, 2)))
+print(paste("Límite superior:", round(limite_superior, 2)))
+
+outliers_antes <- sum(netflix_limpio$tmdb_popularidad < limite_inferior| 
+                      netflix_limpio$tmdb_popularidad > limite_superior)
+print(paste("Número de outliers detectados ANTES:", outliers_antes))
+print(paste("Porcentaje de outliers ANTES:", round((outliers_antes / nrow(netflix_limpio)) * 100, 2), "%"))
+
+##Filtrar outliers
+
+netflix_sin_outliers<- netflix_limpio %>%
+  filter (tmdb_popularidad >= limite_inferior & tmdb_popularidad <= limite_superior)
+
+print(paste("Filas originales:", nrow(netflix_limpio)))
+print(paste("filas sin outliers", nrow(netflix_sin_outliers)))
+print(paste("Filas eliminadas:", nrow(netflix_limpio)- nrow(netflix_sin_outliers)))
+
+p2<- ggplot(netflix_sin_outliers, aes(y = tmdb_popularidad))+
+  geom_boxplot (fill= "#6BAED6", alpha = 0.6)+
+  labs(title = "Deteccion de valores atipicos en tmdb_popularidad",
+       y = "popularidad (tmdb)")+
+  theme_minimal()
+
+print(p2)
+
+
+outliers_despues <- sum(netflix_sin_outliers$tmdb_popularidad < limite_inferior | 
+                          netflix_sin_outliers$tmdb_popularidad > limite_superior, na.rm = TRUE)
+print(paste("Número de outliers detectados despues:", outliers_despues))
+
+
+#Quitar outliers score
+##Resumen
+print (summary(netflix_limpio$tmdb_puntaje))
+
+#Conteo de outliers
+Q1_score <- quantile(netflix_limpio$tmdb_puntaje, probs = 0.25, na.rm = TRUE)
+
+Q3_score <- quantile(netflix_limpio$tmdb_puntaje, probs = 0.75, na.rm = TRUE)
+
+Rango_score<-Q3_score - Q1_score
+
+##Definir limites
+
+limite_inferior_score<-Q1_score-1.5*Rango_score
+limite_superior_score<-Q3_score+1.5*Rango_score
+
+print(Q1_score)
+print(Q3_score)
+print(paste("Rango:", round(Rango_score, 2)))
+print(paste("Límite inferior:", round(limite_inferior_score, 2)))
+print(paste("Límite superior:", round(limite_superior_score, 2)))
+
+outliers_antes_score <- sum(netflix_limpio$tmdb_puntaje < limite_inferior_score| 
+                            netflix_limpio$tmdb_puntaje > limite_superior_score)
+print(paste("Número de outliers detectados ANTES:", outliers_antes_score))
+print(paste("Porcentaje de outliers ANTES:", round((outliers_antes_score / nrow(netflix_limpio)) * 100, 2), "%"))
+
+##Filtrar outliers
+
+netflix_sin_outliers<- netflix_limpio %>%
+  filter (tmdb_puntaje >= limite_inferior_score & tmdb_puntaje <= limite_superior_score)
+
+print(paste("Filas originales:", nrow(netflix_limpio)))
+print(paste("filas sin outliers", nrow(netflix_sin_outliers)))
+print(paste("Filas eliminadas:", nrow(netflix_limpio)- nrow(netflix_sin_outliers)))
+
+p2_puntaje<- ggplot(netflix_sin_outliers, aes(y = tmdb_popularidad))+
+  geom_boxplot (fill= "#6BAED6", alpha = 0.6)+
+  labs(title = "Deteccion de valores atipicos en tmdb_popularidad",
+       y = "popularidad (tmdb)")+
+  theme_minimal()
+
+print(p2_puntaje)
+
+outliers_despues_puntaje <- sum(netflix_sin_outliers$tmdb_puntaje < limite_inferior_score | 
+                                netflix_sin_outliers$tmdb_puntaje > limite_superior_score, na.rm = TRUE)
+print(paste("Número de outliers detectados despues:", outliers_despues_puntaje))
+
+
+#No vamos a quitar los outliers de la data principal que usaremos porque nos parece importante algunos de los datos atipico que salen para futuros analisis. Sin embargo, si usamos estos analisis al momento de evaluar promedios, cuartiles, medias, entre otros. Por eso su creacion.
+
 
 #Resumen final
 
@@ -172,25 +270,26 @@ glimpse(netflix_limpio)
 print("NAs finales:")
 print(colSums(is.na(netflix_limpio)))
 
--------------------------------------------------------------------------------------------------------------------------------
+
 #Paso 2: Crear variables y organizar la data de la manera necesaria para realizar la investigación
   ##Creamos una varible sobre Decadas 
   netflix_limpio<- netflix_limpio%>%
   mutate(
     Decadas = case_when(
-      Año_Lanzamiento < 1900 ~ "Decada de los 80's",
-      Año_Lanzamiento < 2000 ~ "Decada de los 90's",
-      Año_Lanzamiento >2000 ~ "Decada de los 2000"
+      Año_Lanzamiento < 1950 ~ "1940´s",
+      Año_Lanzamiento < 1960 ~ "1950´s",
+      Año_Lanzamiento < 1970 ~ "1960´s",
+      Año_Lanzamiento < 1980 ~ "1970´s",
+      Año_Lanzamiento < 1990 ~ "1980's",
+      Año_Lanzamiento < 2000 ~ "1990's",
+      Año_Lanzamiento < 2010 ~ "2000's",
+      Año_Lanzamiento < 2020 ~ "2010´s",
+      Año_Lanzamiento >= 2020 ~ "2020's"
     )
   )
 
+  
   ##Creamos dos tablas, una con la información de imdb y otra con la información de tmdb
-
-vars_imdb <- c("ID", "Titulos_producciones", "Tipos", "Año_Lanzamiento", "Temporadas", "Tiempo", "Certificacion_edad", "Generos", "Paises_produccion",
-               "imdb_score", "imdb_votos", "imdb_ID")
-
-netflix_imdb <- netflix_limpio %>%
-  select(all_of(vars_imdb))
 
 vars_tmdb <- c("ID", "Titulos_producciones", "Tipos", "Año_Lanzamiento", "Temporadas", "Tiempo", "Certificacion_edad", "Generos", "Paises_produccion",
                "tmdb_popularidad", "tmdb_puntaje")
@@ -198,18 +297,10 @@ vars_tmdb <- c("ID", "Titulos_producciones", "Tipos", "Año_Lanzamiento", "Tempo
 netflix_tmdb <- netflix_limpio %>%
   select(all_of(vars_tmdb))
 
-##Filtrar las películas y series de las tablas de imbd y tmbd
-
-###Tablas de películas y series para imbd
-
-netflix_imbd_pelis <- netflix_imdb %>%
-  filter(Tipos == "MOVIE")
-
-netflix_imbd_series <- netflix_imdb %>%
-  filter(Tipos == "SHOW")
+##Filtrar las películas y series de las tablas de tmbd
 
 
-###Tablas de películas y series para imbd
+###Tablas de películas y series para tmbd
 
 netflix_tmbd_pelis <- netflix_tmdb %>%
   filter(Tipos == "MOVIE")
@@ -217,10 +308,12 @@ netflix_tmbd_pelis <- netflix_tmdb %>%
 netflix_tmbd_series <- netflix_tmdb %>%
   filter(Tipos == "SHOW")
 
-View(netflix_limpio)
 
+#Mejoras, por si acaso, antes de realizar las estadisticas
+netflix_limpio <- netflix_limpio %>%
+  mutate(across(c(Tiempo, tmdb_popularidad, tmdb_puntaje), as.numeric))
 
-# Estadisticas descriptivas de Año de lanzamiento
+  # Estadisticas descriptivas de Año de lanzamiento
 
 resumen_netflix_año_lanzamiento <- netflix_limpio %>%
   summarise(
@@ -238,7 +331,7 @@ print(resumen_netflix_año_lanzamiento)
 
 # Estadisticas descriptivas del tiempo
 
-resumen_netflix_tiempo <- netflix_limpio %>%
+resumen_netflix_tiempo_pelis <- netflix_tmbd_pelis %>%
   summarise(
     media = mean(Tiempo, na.rm = TRUE),
     mediana = median(Tiempo, na.rm = TRUE),
@@ -250,44 +343,28 @@ resumen_netflix_tiempo <- netflix_limpio %>%
     cuartil3 = quantile(Tiempo, 0.75, na.rm = TRUE)
   )
 
-print(resumen_netflix_tiempo)
+print(resumen_netflix_tiempo_pelis)
 
-# Estadisticas descriptivas del Imdb Score
+#Estadisticas descriptivas del tiempo de las series
 
-resumen_netflix_imdb_score <- netflix_limpio %>%
+resumen_netflix_tiempo_series <- netflix_tmbd_series %>%
   summarise(
-    media = mean(imdb_score, na.rm = TRUE),
-    mediana = median(imdb_score, na.rm = TRUE),
-    desviacion_tipica = sd(imdb_score, na.rm = TRUE),
-    minimo = min(imdb_score, na.rm = TRUE),
-    maximo = max(imdb_score, na.rm = TRUE),
-    cuartil1 = quantile(imdb_score, 0.25, na.rm = TRUE),
-    cuartil2 = quantile(imdb_score, 0.5, na.rm = TRUE),
-    cuartil3 = quantile(imdb_score, 0.75, na.rm = TRUE)
+    media = mean(Tiempo, na.rm = TRUE),
+    mediana = median(Tiempo, na.rm = TRUE),
+    desviacion_tipica = sd(Tiempo, na.rm = TRUE),
+    minimo = min(Tiempo, na.rm = TRUE),
+    maximo = max(Tiempo, na.rm = TRUE),
+    cuartil1 = quantile(Tiempo, 0.25, na.rm = TRUE),
+    cuartil2 = quantile(Tiempo, 0.5, na.rm = TRUE),
+    cuartil3 = quantile(Tiempo, 0.75, na.rm = TRUE)
   )
 
-print(resumen_netflix_imdb_score)
+print(resumen_netflix_tiempo_series)
 
-
-# Estadisticas descriptivas de Imdb Votes
-
-resumen_netflix_imdb_votos <- netflix_limpio %>%
-  summarise(
-    media = mean(imdb_votos, na.rm = TRUE),
-    mediana = median(imdb_votos, na.rm = TRUE),
-    desviacion_tipica = sd(imdb_votos, na.rm = TRUE),
-    minimo = min(imdb_votos, na.rm = TRUE),
-    maximo = max(imdb_votos, na.rm = TRUE),
-    cuartil1 = quantile(imdb_votos, 0.25, na.rm = TRUE),
-    cuartil2 = quantile(imdb_votos, 0.5, na.rm = TRUE),
-    cuartil3 = quantile(imdb_votos, 0.75, na.rm = TRUE)
-  )
-
-print(resumen_netflix_imdb_votos)
 
 # Estadisticas descriptivas de tmdb Popularidad
 
-resumen_netflix_tmdb_polularidad <- netflix_limpio %>%
+resumen_netflix_tmdb_polularidad <- netflix_sin_outliers %>%
   summarise(
     media = mean(tmdb_popularidad, na.rm = TRUE),
     mediana = median(tmdb_popularidad, na.rm = TRUE),
@@ -303,7 +380,7 @@ print(resumen_netflix_tmdb_polularidad)
 
 # Estadisticas descriptivas de tmdb Puntaje
 
-resumen_netflix_tmdb_puntaje <- netflix_limpio %>%
+resumen_netflix_tmdb_puntaje <- netflix_sin_outliers %>%
   summarise(
     media = mean(tmdb_puntaje, na.rm = TRUE),
     mediana = median(tmdb_puntaje, na.rm = TRUE),
@@ -330,55 +407,20 @@ gd2 <- gd %>%
   summarise(cantidad = n())
 print(gd2)
 
-# Histograma de imdb score
-
-grafico_imdb_score <- ggplot(netflix_limpio, aes(x = imdb_score)) +
-  geom_histogram(
-    bins  = 30,           # número de bins
-    fill  = "brown", # color de relleno
-    color = "black",      # color del borde
-    alpha = 0.7           # transparencia
-  ) +
-  labs(
-    title = "Histograma imdb score",
-    x     = "imdb score",
-    y     = "Frecuencia" 
-  ) + 
-  theme_minimal()
-
-print(grafico_imdb_score)
-
-
-# Histograma de imdb votos
-
-grafico_votos <- ggplot(netflix_limpio, aes(x = imdb_votos)) +
-  geom_histogram(
-    bins  = 50,           # número de bins
-    fill  = "gold", # color de relleno
-    color = "black",      # color del borde
-    alpha = 0.7           # transparencia
-  ) +
-  labs(
-    title = "Histograma de imdb votos",
-    x     = "imdb votos",
-    y     = "Frecuencia"
-  ) +
-  theme_minimal()
-
-print(grafico_votos)
 
 # Histograma de tmdb popularidad
 
-grafico_popularidad <- ggplot(netflix_limpio, aes(x = tmdb_popularidad)) +
+grafico_popularidad <- ggplot(netflix_sin_outliers, aes(x = tmdb_popularidad)) +
   geom_histogram(
-    bins  = 30,           # número de bins
-    fill  = "darkred", # color de relleno
-    color = "black",      # color del borde
-    alpha = 0.7           # transparencia
+    binwidth = 30 ,
+    fill  = "darkred", 
+    color = "black",  
+    alpha = 0.7           
   ) +
+  coord_flip()+
   labs(
     title = "Histograma de tmdb popularidad",
-    x     = "imdb popularidad",
+    x     = "tmdb popularidad",
     y     = "Frecuencia"
   ) +
   theme_minimal()
@@ -387,12 +429,12 @@ print(grafico_popularidad)
 
 # Histograma de tmdb puntaje
 
-grafico_puntaje <- ggplot(netflix_limpio, aes(x = tmdb_puntaje)) +
+grafico_puntaje <- ggplot(netflix_sin_outliers, aes(x = tmdb_puntaje)) +
   geom_histogram(
-    bins  = 30,           # número de bins
-    fill  = "lightblue", # color de relleno
-    color = "black",      # color del borde
-    alpha = 0.7           # transparencia
+    bins  = 30,           
+    fill  = "darkred", 
+    color = "black",      
+    alpha = 0.7           
   ) +
   labs(
     title = "Histograma de tmdb puntaje",
@@ -402,3 +444,156 @@ grafico_puntaje <- ggplot(netflix_limpio, aes(x = tmdb_puntaje)) +
   theme_minimal()
 
 print(grafico_puntaje)
+
+#¿Cómo está compuesto el catálogo de Netflix? 
+  
+ ## 1-tipo de contenido
+
+grafico_tipos_bar <- ggplot(netflix_limpio, aes(x = Tipos, fill = Tipos)) +
+  geom_bar() +
+  scale_fill_manual(values = c("MOVIE" = "#931B26", "SHOW" = "#37020D")) +
+  labs(
+    title = "Cantidad de peliculas y series",
+    x = "Tipo",
+    y = "Cantidad"
+  ) +
+  theme_minimal() +  # Llama a theme_minimal() sin argumentos
+  theme(  # Aquí van las personalizaciones
+    plot.title = element_text(hjust = 0.5, face = "bold", color = "#37020D")
+  )
+
+print(grafico_tipos_bar)
+
+
+### grafico de torta sobre  los tipos para evaluar porcentajes
+
+Tipos_grafic <- netflix_limpio %>%
+  group_by(Tipos) %>%
+  summarise( Count = n(), .groups = "drop")%>%
+  mutate(Porcentaje = round(Count / sum(Count)*100, 2))
+
+grafico_tipos_pie <- ggplot(Tipos_grafic, aes(x ="", y= Count, fill = Tipos)) +
+  geom_bar(stat = "identity", width = 1, color = "white")+
+  geom_text(aes(label = paste0(Porcentaje, "%")),
+            color = "white", size = 5)+
+  scale_fill_manual( values = c( "MOVIE" ="#931B26", "SHOW" = "#37020D"))+
+  coord_polar(theta = "y")+
+  labs(
+    title = "Distribucion de peliculas y series",
+    fill = "Tipo"
+  )+
+  theme_minimal()
+
+print(grafico_tipos_pie)
+
+##2-evolución en el tiempo
+###distribución de años de lanzamiento. 
+
+#Contar las decadas
+distribucion_decadas <- netflix_limpio %>%
+    group_by(Decadas) %>%
+    summarise(Conteo = n(), .groups = "drop")
+
+#Crear el grafico
+
+grafico_decadas <- ggplot(distribucion_decadas, aes(x = Decadas, y = Conteo, group = 1))+
+  geom_line(color = "black", size = 1.5, linetype = "solid")+
+  geom_point(color = "darkred", size = 3, shape =21, fill = "white")+
+  labs(
+    title = "Distribucion de producciones por Decadas",
+    x = "Decadas",
+    y = "Numero de producciones"
+  )+
+  theme_minimal()
+
+print(grafico_decadas)
+
+#3-Generos
+##Conteo de géneros 
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Generos = str_to_lower(Generos),                     
+    Generos = str_replace_all(Generos, "\\[|\\]|'", ""),
+    Generos = str_trim(Generos)                          
+  ) %>%
+  separate_rows(Generos, sep = ",\\s*")
+
+
+conteo_generos <- netflix_limpio%>%
+  group_by(Generos) %>%
+  summarise(Conteo = n(), .groups = "drop") %>%
+  mutate(Porcentaje = round(Conteo / sum(Conteo)*100, 2))
+
+
+grafico_generos <- ggplot(conteo_generos, aes(x = reorder(Generos, Conteo), y = Conteo, fill = Generos)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_manual( values = c( "action" ="#931B26",
+                                 "animation" = "#37020D",
+                                 "comedy" = "#7B0003",
+                                 "fantasy"= "#290F04", 
+                                 "thriller"= "#610013",
+                                 "scifi"= "#185ACC", 
+                                 "drama" = "#FA030B",
+                                 "family"= "#110075", 
+                                 "music"= "#1495EA",
+                                 "horror"= "#5870F4", 
+                                 "crime"= "#60000F",
+                                 "european"= "#AB000F",
+                                 "documentarion"= "",
+                                 "history"="#F2000F",
+                                 "reality"="#F2000F",
+                                 "romance"= "#6490DE",
+                                 "sport"= "#273857",
+                                 "war"= "#F57169",
+                                 "western"="#8F413D"))+
+  
+  labs(
+    title = "Cantidad de producciones por género",
+    x = "Género",
+    y = "Número de producciones"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.y = element_text(size = 10)
+  )
+print(grafico_generos)
+  
+
+
+ # 4. Número de temporadas según la mediana de este dato 
+  
+mediana_temporadas <- median(netflix_tmbd_series$Temporadas, na.rm = TRUE)
+print(paste("Mediana de Temporadas en las Series:", round(mediana_temporadas, 2)))
+
+
+grafico_temp_series <- ggplot(netflix_tmbd_series, aes(x = Temporadas)) +
+  geom_histogram(bins = 30, fill = "darkred", color = "white", alpha = 0.7, na.rm = TRUE) +
+  geom_vline(xintercept = mediana_temporadas, color = "red", size = 1.2, linetype = "dashed") +
+  annotate("text", x = mediana_temporadas, y = Inf, 
+           label = paste("Mediana:", round(mediana_temporadas, 2)),
+           vjust = 2, color = "red", size = 4) +
+  labs(
+    title = "Distribución del Número de Temporadas en Series",
+    x = "Número de Temporadas",
+    y = "Frecuencia"
+  ) +
+  theme_minimal()
+
+print(grafico_temp_series)
+
+
+
+ggplot(netflix_tmbd_series, aes(y = Temporadas)) +
+  geom_boxplot(fill = "darkred", color = "red", alpha = 0.6, outlier.color = "red") +
+  stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)), 
+               vjust = -0.5, color = "black", size = 3.5)+
+  labs(
+    title = "Distribución del Número de Temporadas en Series",
+    y = "Número de Temporadas"
+  ) +
+  theme_minimal(base_size = 13) 
+
+

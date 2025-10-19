@@ -11,6 +11,8 @@ library(stringr)
 
 ##Cargar el dataset
 
+ruta_BD_Netflix <- "C:\\Users\\3340\\OneDrive\\Escritorio\\UCV\\Sem 1\\COMPU 1\\Proyecto\\1111111\\Hidden-Gems\\Data\\netflix_dataset.csv"
+
 netflix<- read_csv(ruta_BD_Netflix)
 
 # Cambios basicos y Presentación
@@ -83,7 +85,7 @@ netflix_limpio <-netflix_limpio %>%
       TRUE ~ Descripcion)
   )
 
-###Se reemplazan con "0" los ID , Score, votos, popularidad de las paginas imdb y tmbd que aparezcan en NA
+###Se reemplazan con "0" los ID , Score, votos, popularidad de las paginas imdb y tmdb que aparezcan en NA
 netflix_limpio <- netflix_limpio %>%
   mutate(
     tmdb_popularidad = ifelse(is.na(tmdb_popularidad), 0, tmdb_popularidad),
@@ -149,6 +151,13 @@ netflix_limpio <- netflix_limpio %>%
 netflix_limpio <- netflix_limpio %>%
   separate_rows(Generos, sep = ",\\s*")
 
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Paises_produccion = str_to_lower(Paises_produccion),
+    Paises_produccion = str_replace_all(Paises_produccion, "\\$|\\$|'", ""),
+    Paises_produccion = str_trim(Paises_produccion)
+  ) %>%
+  separate_rows(Paises_produccion, sep = ",\\s*")
 
 #prueba
 
@@ -275,7 +284,7 @@ print(colSums(is.na(netflix_limpio)))
   ##Creamos una varible sobre Decadas 
   netflix_limpio<- netflix_limpio%>%
   mutate(
-    Decadas = case_when(
+    decada = case_when(
       Año_Lanzamiento < 1950 ~ "1940´s",
       Año_Lanzamiento < 1960 ~ "1950´s",
       Año_Lanzamiento < 1970 ~ "1960´s",
@@ -292,20 +301,23 @@ print(colSums(is.na(netflix_limpio)))
   ##Creamos dos tablas, una con la información de imdb y otra con la información de tmdb
 
 vars_tmdb <- c("ID", "Titulos_producciones", "Tipos", "Año_Lanzamiento", "Temporadas", "Tiempo", "Certificacion_edad", "Generos", "Paises_produccion",
-               "tmdb_popularidad", "tmdb_puntaje")
+               "tmdb_popularidad", "tmdb_puntaje", "decada")
 
 netflix_tmdb <- netflix_limpio %>%
   select(all_of(vars_tmdb))
 
-##Filtrar las películas y series de las tablas de tmbd
-
-
-###Tablas de películas y series para tmbd
-
-netflix_tmbd_pelis <- netflix_tmdb %>%
+netflix_tmdb_pelis <- netflix_tmdb %>%
   filter(Tipos == "MOVIE")
 
-netflix_tmbd_series <- netflix_tmdb %>%
+##Filtrar las películas y series de las tablas de tmdb
+
+
+###Tablas de películas y series para tmdb
+
+netflix_tmdb_pelis <- netflix_tmdb %>%
+  filter(Tipos == "MOVIE")
+
+netflix_tmdb_series <- netflix_tmdb %>%
   filter(Tipos == "SHOW")
 
 
@@ -331,7 +343,7 @@ print(resumen_netflix_año_lanzamiento)
 
 # Estadisticas descriptivas del tiempo
 
-resumen_netflix_tiempo_pelis <- netflix_tmbd_pelis %>%
+resumen_netflix_tiempo_pelis <- netflix_tmdb_pelis %>%
   summarise(
     media = mean(Tiempo, na.rm = TRUE),
     mediana = median(Tiempo, na.rm = TRUE),
@@ -347,7 +359,7 @@ print(resumen_netflix_tiempo_pelis)
 
 #Estadisticas descriptivas del tiempo de las series
 
-resumen_netflix_tiempo_series <- netflix_tmbd_series %>%
+resumen_netflix_tiempo_series <- netflix_tmdb_series %>%
   summarise(
     media = mean(Tiempo, na.rm = TRUE),
     mediana = median(Tiempo, na.rm = TRUE),
@@ -491,12 +503,12 @@ print(grafico_tipos_pie)
 
 #Contar las decadas
 distribucion_decadas <- netflix_limpio %>%
-    group_by(Decadas) %>%
+    group_by(decada) %>%
     summarise(Conteo = n(), .groups = "drop")
 
 #Crear el grafico
 
-grafico_decadas <- ggplot(distribucion_decadas, aes(x = Decadas, y = Conteo, group = 1))+
+grafico_decadas <- ggplot(distribucion_decadas, aes(x = decada, y = Conteo, group = 1))+
   geom_line(color = "black", size = 1.5, linetype = "solid")+
   geom_point(color = "darkred", size = 3, shape =21, fill = "white")+
   labs(
@@ -565,11 +577,11 @@ print(grafico_generos)
 
  # 4. Número de temporadas según la mediana de este dato 
   
-mediana_temporadas <- median(netflix_tmbd_series$Temporadas, na.rm = TRUE)
+mediana_temporadas <- median(netflix_tmdb_series$Temporadas, na.rm = TRUE)
 print(paste("Mediana de Temporadas en las Series:", round(mediana_temporadas, 2)))
 
 
-grafico_temp_series <- ggplot(netflix_tmbd_series, aes(x = Temporadas)) +
+grafico_temp_series <- ggplot(netflix_tmdb_series, aes(x = Temporadas)) +
   geom_histogram(bins = 30, fill = "darkred", color = "white", alpha = 0.7, na.rm = TRUE) +
   geom_vline(xintercept = mediana_temporadas, color = "red", size = 1.2, linetype = "dashed") +
   annotate("text", x = mediana_temporadas, y = Inf, 
@@ -586,7 +598,7 @@ print(grafico_temp_series)
 
 
 
-ggplot(netflix_tmbd_series, aes(y = Temporadas)) +
+ggplot(netflix_tmdb_series, aes(y = Temporadas)) +
   geom_boxplot(fill = "darkred", color = "red", alpha = 0.6, outlier.color = "red") +
   stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)), 
                vjust = -0.5, color = "black", size = 3.5)+
@@ -597,3 +609,131 @@ ggplot(netflix_tmbd_series, aes(y = Temporadas)) +
   theme_minimal(base_size = 13) 
 
 
+# Análisis de exito según las décadas
+
+## Grafico de barras (peliculas)
+
+ggplot(netflix_tmdb_pelis , aes(x = decada, y = popularidad_promedio, fill = genero)) +
+  geom_col(alpha = 0.85, color = "white") +
+  scale_fill_manual(values = c("#####", "######", "#9E9AC8", "#74C476", "#FD8D3C", "#FDD49E")) +
+  coord_flip() +
+  labs(title = "Popularidad promedio por género y década en Netflix",
+       subtitle = "Basado en la variable tmdb_popularidad",
+       x = "Década",
+       y = "Popularidad promedio",
+       fill = "Género") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+
+## Grafico de barras (series)
+
+ggplot(netflix_tmdb_series , aes(x = decada, y = popularidad_promedio, fill = genero)) +
+  geom_col(alpha = 0.85, color = "white") +
+  scale_fill_manual(values = c("#####", "######", "#9E9AC8", "#74C476", "#FD8D3C", "#FDD49E")) +
+  coord_flip() +
+  labs(title = "Popularidad promedio por género y década en Netflix",
+       subtitle = "Basado en la variable tmdb_popularidad",
+       x = "Década",
+       y = "Popularidad promedio",
+       fill = "Género") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+
+# Grafico de lineas
+
+netflix_limpio %>%
+  group_by(decada, Tipos) %>%
+  summarise(duracion_promedio = mean(Tiempo, na.rm = TRUE)) %>%
+  
+  ggplot(aes(x = decada, y = duracion_promedio, color = Tipos, group = Tipos)) +
+  geom_line(color = "####", size = 1.2) +
+  geom_point(color = "lightblue", size = 3, shape = 21, fill = "white", stroke = 1.5) +
+  scale_x_continuous() +
+  labs(title = "Evolución de la duración promedio por tipo de contenido",
+       x = "Década", y = "Duración promedio (minutos)", color = "Tipos") + 
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Grafico de boxplot (geom_boxplot)
+
+ggplot(netflix_tmdb_pelis, aes(x = decada, y = duracion, fill = genero)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c(
+    "Acción" = "#FF6F61",
+    "Comedia" = "#6BAED6",
+    "Drama" = "#9E9AC8",
+    "Documental" = "#74C476",
+    "Animación" = "#FD8D3C",
+    "Romance" = "#FDD49E"
+  )) +
+  labs(title = "Distribución de la duración por década y generos del contenido",
+       x = "Década", y = "Duración (minutos)") +
+  theme_minimal()
+
+ggplot(netflix_tmdb_series, aes(x = decada, y = duracion, fill = genero)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c(
+    "Acción" = "#FF6F61",
+    "Comedia" = "#6BAED6",
+    "Drama" = "#9E9AC8",
+    "Documental" = "#74C476",
+    "Animación" = "#FD8D3C",
+    "Romance" = "#FDD49E"
+  )) +
+  labs(title = "Distribución de la duración por década y generos del contenido",
+       x = "Década", y = "Duración (minutos)") +
+  theme_minimal()
+
+
+#Mapa de calor
+
+## Calcular la popularidad promedio por país y década
+
+popularidad_pais_decada <- netflix_tmdb_pelis %>%
+  group_by(decada, Paises_produccion) %>%
+  summarise(popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE),
+            cantidad = n()) %>%
+  arrange(decada, desc(popularidad_promedio))
+
+
+# Gráfico de dispersión con suavizado
+
+ggplot(netflix_tmdb_pelis, aes(x = Tiempo, y = tmdb_puntaje, color = decada)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(se = FALSE, method = "lm") +
+  scale_color_manual(values = c(
+    "1980s" = "#8DD3C7",
+    "1990s" = "#FFFFB3",
+    "2000s" = "#BEBADA",
+    "2010s" = "#FB8072",
+    "2020s" = "#80B1D3")) +
+  labs(title = "Relación entre duración y score según la década",
+          x = "Duración (minutos)", y = "Score") +
+      theme_minimal()
+    
+    ggplot(netflix_tmdb_series, aes(x = Tiempo, y = tmdb_puntaje, color = decada)) +
+      geom_point(alpha = 0.5) +
+      geom_smooth(se = FALSE, method = "lm") +
+      scale_color_manual(values = c(
+        "1980s" = "#8DD3C7",
+        "1990s" = "#FFFFB3",
+        "2000s" = "#BEBADA",
+        "2010s" = "#FB8072",
+        "2020s" = "#80B1D3")) +
+      labs(title = "Relación entre duración y score según la década",
+               x = "Duración (minutos)", y = "Score") +
+          theme_minimal()
+      
+        ggplot(netflix_tmdb_series, aes(y = Temporadas)) +
+          geom_boxplot(fill = "darkred", color = "red", alpha = 0.6, outlier.color = "red") +
+          labs(
+            title = "Distribución del Número de Temporadas en Series",
+            y = "Número de Temporadas"
+          ) +
+          theme_minimal(base_size = 13) +
+          theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+          stat_summary(fun = median, geom = "text", aes(x =1, label = round(after_stat(y),1)), 
+                     vjust = -0.5, color = "black", size = 3.5)
+        
+    
+  

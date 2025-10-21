@@ -11,7 +11,7 @@ library(stringr)
 
 ##Cargar el dataset
 
-ruta_BD_Netflix <- "C:\\Users\\Usuario\\Documents\\GitHub\\Hidden-Gems\\Data\\netflix_dataset.csv"
+ruta_BD_Netflix <- "C:\\Users\\3340\\OneDrive\\Escritorio\\UCV\\Sem 1\\COMPU 1\\Proyecto\\1111111\\Hidden-Gems\\Data\\netflix_dataset.csv"
 
 netflix<- read_csv(ruta_BD_Netflix)
 
@@ -830,3 +830,78 @@ ggplot(popularidad_filtrada,
     size = "Cantidad de producciones"
   ) +
   theme_minimal()
+
+#Hidden Gems__________________________________
+
+#Primero debemos calcular como definimos que una peli es subvalorada: 
+#Los parametros son que tenga una popularidad que no sobrepase el percentil 40 y un puntaje que vaya a patir del percentil 60 en adelante
+
+
+## --- Calculamos percentiles
+p40_popularidad <- quantile(netflix_tmdb_pelis$tmdb_popularidad, 0.4, na.rm = TRUE)
+p60_score <- quantile(netflix_tmdb_pelis$tmdb_puntaje, 0.6, na.rm = TRUE)
+
+
+##Ahora hacemos un top 20 de las pelis subvaloradas
+
+hidden_gems_pelis <- netflix_tmdb_pelis %>%
+  filter(tmdb_popularidad < p40_popularidad & tmdb_puntaje > p60_score) %>%
+  arrange(desc(tmdb_puntaje)) %>%
+  slice_head(n = 20) %>%
+  select(Titulos_producciones, Tipos, tmdb_popularidad, tmdb_puntaje)
+
+print(hidden_gems_pelis)
+
+
+##Grafico del top 20 de pelis
+ggplot(hidden_gems_pelis, aes(x = reorder(Titulos_producciones, tmdb_puntaje),  
+                              y = tmdb_puntaje)) +
+  geom_col(fill = "darkred", alpha = 0.9)+
+  coord_flip() +
+  
+  labs(
+    title = "Top 20 Hidden Gems en Netflix",
+    subtitle = "Producciones con alta valoración y baja popularidad",
+    x = "",
+    y = "Puntaje TMDB" 
+  ) +
+  theme_minimal()
+
+#¿Cual es la correlacion del puntaje de las peliculas con su popularidad?
+cor(netflix_tmdb_pelis$tmdb_puntaje, netflix_tmdb_pelis$tmdb_popularidad, use="complete.obs")
+
+##-----------------Lo mismo con las series----------------
+
+p40_popularidad_series <- quantile(netflix_tmdb_series$tmdb_popularidad, 0.4, na.rm = TRUE)
+p60_score_series<- quantile(netflix_tmdb_series$tmdb_puntaje, 0.6, na.rm = TRUE)
+
+##Ahora hacemos un top 20 de las pelis subvaloradas
+
+hidden_gems_series <- netflix_tmdb_series %>%
+  filter(tmdb_popularidad < p40_popularidad_series & tmdb_puntaje > p60_score_series) %>%
+  arrange(desc(tmdb_puntaje)) %>%
+  slice_head(n = 20) %>%
+  select(Titulos_producciones, Tipos, tmdb_popularidad, tmdb_puntaje)
+
+print(hidden_gems_series)
+
+
+##Grafico del top 20 de pelis
+ggplot(hidden_gems_series, aes(x = reorder(Titulos_producciones, tmdb_puntaje),  
+                               y = tmdb_puntaje)) +
+  geom_col(fill = "darkred", alpha = 0.9) +
+  coord_flip() +
+  
+  labs(
+    title = "Top 20 Hidden Gems en Netflix",
+    subtitle = "Producciones con alta valoración y baja popularidad",
+    x = "",
+    y = "Puntaje TMDB" 
+  ) +
+  theme_minimal()
+
+
+#¿Cual es la correlacion del puntaje de las series con su popularidad?
+cor(netflix_tmdb_series$tmdb_puntaje, netflix_tmdb_series$tmdb_popularidad, use="complete.obs")
+
+

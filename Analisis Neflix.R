@@ -11,7 +11,7 @@ library(stringr)
 
 ##Cargar el dataset
 
-ruta_BD_Netflix <- "C:\\Users\\3340\\OneDrive\\Escritorio\\UCV\\Sem 1\\COMPU 1\\Proyecto\\1111111\\Hidden-Gems\\Data\\netflix_dataset.csv"
+ruta_BD_Netflix <- "C:\\Users\\Usuario\\Documents\\GitHub\\Hidden-Gems\\Data\\netflix_dataset.csv"
 
 netflix<- read_csv(ruta_BD_Netflix)
 

@@ -1,17 +1,32 @@
-## Instalamos librerias necesarias 
-install.packages("usethis")
-install.packages("gitcreds")
+---
+title: "Analisis Netflix"
+author: "Ysabella Núñez, Milena Martinez"
+date: "2025-10-10"
+output:
+ html_document: 
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    collapsed: true
+    smooth_scroll: true
+    theme: journal
+    highlight: kate
+    df_print: paged
+    code_folding: hide
+---
+```{r}
 
-## Cargamos libreria y configuramos
-library(usethis)
-use_git_config(
-  user.name = "miili21", # Cambia esto por tu nombre
-  user.email = "milenamartinez21a@gmail.com" # Usa el email asociado a tu cuenta de GitHub
-)
+library(readr)
 
-## Creamos token para credenciales de github
-create_github_token()
 
-## Configuramos token
-library(gitcreds)
-gitcreds_set()
+netflix_data <- read_csv("netflix_dataset.csv")
+```
+    
+# Planteamiento del problema
+#Objetivos 
+##Objetivo general 
+##Objetivos específicos
+#Marco de referencia
+
+
+

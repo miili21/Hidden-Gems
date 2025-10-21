@@ -1,0 +1,10 @@
+name: "analisis-netflix"
+output_dir: "docs" # El directorio que Render buscará
+navbar:
+  title: "Análisis Netflix"
+  left:
+    - text: "Informe Principal"
+      href: index.html
+output:
+  html_document:
+    theme: journal # Puedes elegir el tema que prefieras

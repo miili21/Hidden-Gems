@@ -56,6 +56,43 @@ library(stringr)
 netflix_data <- read_csv("netflix_dataset.csv")
 ```
     
+# Marco metodológico
+
+## Enfoque de la investigación
+El enfoque es cuantitativo y descriptivo. Con el objetivo principal de medir y explicar relaciones entre variables numéricas y cualitativas; además, las elecciones de umbral de gemas, manejo de outliers, dependen de estadísticas reproducibles y cuantificables.
+
+## Tipo de investigación
+La investigación es descriptiva y correlacional con elementos exploratorios, se enfoca en describir el catálogo,  explorar distintas variables y analizar asociaciones y tendencias temporales que podrán servir de base para trabajos predictivos futuros.
+
+## Periodo de referencia
+El periodo de análisis viene de las fechas disponibles en `date_added` y `release_year`. Se sugiere usar todo el rango disponible en el dataset para maximizar la inferencia histórica, y subanálisis por década para mejorar interpretabilidad. La elección por décadas facilita comparaciones históricas sin suponer continuidad mensual uniforme.
+
+## Procesamiento y análisis de datos (pasos reproducibles)
+1) Carga de librerías y dataset
+
+
+2) clean_names() para uniformizar nombres.
+
+
+3) Renombrado condicional (soportar esquema en inglés y el script provisto en español).
+
+
+4) Normalización de duration (extraer minutos para películas; extraer número de temporadas para series).
+
+
+5) Separación de listed_in/genres y country/production_countries con separate_rows().
+
+
+6) Manejo de valores faltantes (NA) en clasificaciones y descripciones, detección de duplicados y eliminación basada en título.
+
+
+7) Detección de outliers (IQR) y creación de versiones filtradas para análisis sensibles a valores extremos.
+
+
+8) Cálculos descriptivos, agrupamientos y gráficas con ggplot2.
+
+
+
 
 
 

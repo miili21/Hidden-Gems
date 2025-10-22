@@ -14,19 +14,48 @@ output:
     df_print: paged
     code_folding: hide
 ---
-```{r}
+![foto de data](https://images.ctfassets.net/y2ske730sjqp/1aONibCke6niZhgPxuiilC/2c401b05a07288746ddf3bd3943fbc76/BrandAssets_Logos_01-Wordmark.jpg?w=940)
+
+# Planteamiento del problema
+La cantidad de películas y series que hay en Netflix son miles y de distintos géneros, países y años de lanzamiento. Sin embargo, hay algunas producciones que alcanzan alta popularidad y son ampliamente recomendadas, mientras que otras a pesar de tener buena calidad y alta valoración reciben menos atención del público. Este desequilibrio motiva a la pregunta de ¿qué características del contenido son las que influyen en la visibilidad y éxito de las producciones de la plataforma, cómo pueden identificarse y promoverse aquellas obras de alta calidad que pasan desapercibidas?
+
+El problema principal radica en que gran parte del consumo de los usuarios proviene de sistemas de recomendación automatizados, los cuales tienden a favorecer los títulos que ya son populares. Éste fenómeno crea un ciclo de visibilidad desigual, donde las producciones con menores posición inicial permanecen ocultas y no logran alcanzar al público potencial, reduciendo la diversidad del consumo audiovisuaL.
+
+Ante esta situación, se prefiere escoger un enfoque empírico a partir de información concreta obtenida del dataset, aplicando limpieza, análisis exploratorio multivariado y criterios reproducibles para rankear posibles gemas, buscando observar patrones y resultados reales. La propuesta busca analizar los datos del catálogo para identificar los factores que determinan la popularidad o invisibilidad de una producción, y detectar de forma efectiva las “gemas ocultas“, es decir, aquellas películas y series con buenas valoraciones pero baja popularidad.
+
+
+# Objetivos 
+## Objetivo general
+
+
+Analizar los datos del catálogo de Netflix para identificar los factores relacionados a la popularidad y visibilidad de las producciones e identificar un conjunto reproducible de “gemas ocultas”.
+
+
+## Objetivos específicos
+
+1. Realizar la carga y limpieza reproducible del dataset base, asegurando nombres consistentes y formatos adecuados (fechas, duración, géneros).
+
+
+2. Analizar cómo ha sido la evolución temporal de las incorporaciones al catálogo y las tendencias del tipo de contenido (Movie vs TV Show).
+
+
+4. Proponer y aplicar un criterio reproducible para identificar las 20 “gemas ocultas”.
+
+
+
+```{r message=FALSE, warning=FALSE}
 
 library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(here)
+library(stringr)
 
 
 netflix_data <- read_csv("netflix_dataset.csv")
 ```
     
-# Planteamiento del problema
-#Objetivos 
-##Objetivo general 
-##Objetivos específicos
-#Marco de referencia
 
 
 

@@ -4,4 +4,4 @@ En el amplio catálogo de Netflix, donde cada día aparecen nuevos estrenos y re
 
 Informe Dinamico con Rmarkdown: https://netflixsgems.onrender.com
 
-Dashboard con streamlit:https://netflix-gems-bi34.onrender.com
+Dashboard con streamlit: https://netflix-gems-bi34.onrender.com

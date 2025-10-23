@@ -254,3 +254,24 @@ with tab2:
                               title="Popularidad promedio por país y década")
     fig_burbujas.update_layout(template="plotly_dark")
     st.plotly_chart(fig_burbujas, use_container_width=True)
+    
+    # ----------- TAB 3: Hidden Gems -----------
+with tab3:
+    st.header("Hidden Gems (Películas Subvaloradas)")
+    st.write("""
+    En este apartado se destacan las películas y series que, a pesar de no tener una alta popularidad,
+    presentan calificaciones sobresalientes en TMDB.
+    """)
+
+    p40_pop = netflix["Popularidad"].quantile(0.4)
+    p60_score = netflix["Puntaje"].quantile(0.6)
+    hidden_gems = netflix[(netflix["Popularidad"] < p40_pop) & (netflix["Puntaje"] > p60_score)]
+    top_hidden_gems = hidden_gems.sort_values("Puntaje", ascending=False).head(20)
+
+    st.dataframe(top_hidden_gems[["Titulo", "Tipo", "Genero", "Popularidad", "Puntaje"]])
+
+    fig5 = px.bar(top_hidden_gems, x="Titulo", y="Puntaje", color="Tipo", text="Puntaje",
+                  title="Top 20 Hidden Gems", color_discrete_sequence=["#E50914", "#B20710"])
+    fig5.update_layout(template="plotly_dark", xaxis_tickangle=-45)
+    st.plotly_chart(fig5, use_container_width=True)
+

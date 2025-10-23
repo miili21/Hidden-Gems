@@ -1,5 +1,5 @@
 ---
-title: "Analisis Netflix"
+title: "Analisis de Netflix- Netflix's Gems"
 author: "Ysabella Núñez, Milena Martinez"
 date: "2025-10-10"
 output:
@@ -16,7 +16,8 @@ output:
 ---
 ![foto de data](https://images.ctfassets.net/y2ske730sjqp/1aONibCke6niZhgPxuiilC/2c401b05a07288746ddf3bd3943fbc76/BrandAssets_Logos_01-Wordmark.jpg?w=940)
 
-# Planteamiento del problema
+# Planteamiento de la Investigación
+## 1.Planteamiento del problema
 La cantidad de películas y series que hay en Netflix son miles y de distintos géneros, países y años de lanzamiento. Sin embargo, hay algunas producciones que alcanzan alta popularidad y son ampliamente recomendadas, mientras que otras a pesar de tener buena calidad y alta valoración reciben menos atención del público. Este desequilibrio motiva a la pregunta de ¿qué características del contenido son las que influyen en la visibilidad y éxito de las producciones de la plataforma, cómo pueden identificarse y promoverse aquellas obras de alta calidad que pasan desapercibidas?
 
 El problema principal radica en que gran parte del consumo de los usuarios proviene de sistemas de recomendación automatizados, los cuales tienden a favorecer los títulos que ya son populares. Éste fenómeno crea un ciclo de visibilidad desigual, donde las producciones con menores posición inicial permanecen ocultas y no logran alcanzar al público potencial, reduciendo la diversidad del consumo audiovisuaL.
@@ -41,20 +42,6 @@ Analizar los datos del catálogo de Netflix para identificar los factores relaci
 
 4. Proponer y aplicar un criterio reproducible para identificar las 20 “gemas ocultas”.
 
-
-
-```{r message=FALSE, warning=FALSE}
-
-library(readr)
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(here)
-library(stringr)
-
-
-netflix_data <- read_csv("netflix_dataset.csv")
-```
     
 # Marco metodológico
 
@@ -92,7 +79,292 @@ El periodo de análisis viene de las fechas disponibles en `date_added` y `relea
 8) Cálculos descriptivos, agrupamientos y gráficas con ggplot2.
 
 
+```{r message=FALSE, warning=FALSE}
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(here)
+library(stringr)
+library(dplyr)
+library(knitr)
 
 
+netflix_data <- read_csv("netflix_dataset.csv")
+
+# Cambiar títulos al español
+
+netflix1 <- netflix_data %>%
+  rename(
+    ID = id,
+    Titulos_producciones = title,
+    Tipos = type,
+    Descripcion = description, 
+    Año_Lanzamiento = release_year,
+    Certificacion_edad = age_certification,
+    Tiempo = runtime,
+    Generos = genres,
+    Paises_produccion = production_countries,
+    Temporadas = seasons,
+    imdb_ID = imdb_id,
+    imdb_votos = imdb_votes,
+    tmdb_popularidad = tmdb_popularity,
+    tmdb_puntaje = tmdb_score
+  ) 
+  
+##Para la clasificación de edad se nombra como "No clasificados" los valores NA
+netflix_limpio <-netflix1 %>%
+  mutate(
+    Certificacion_edad = case_when(
+      is.na(Certificacion_edad)~"No Clasificado", 
+      TRUE ~ Certificacion_edad)
+  )
+
+##Para la descripción cambiar los datos NA como "no disponibles"
+
+netflix_limpio <-netflix_limpio %>%
+  mutate(
+    Descripcion = case_when(
+      is.na(Descripcion)~"No disponible", 
+      TRUE ~ Descripcion)
+  )
+
+###Se reemplazan con "0" los ID , Score, votos, popularidad de las paginas imdb y tmdb que aparezcan en NA
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    tmdb_popularidad = ifelse(is.na(tmdb_popularidad), 0, tmdb_popularidad),
+    tmdb_puntaje = ifelse(is.na(tmdb_puntaje), 0, tmdb_puntaje) ,
+    imdb_score = ifelse(is.na(imdb_score), 0, imdb_score) ,
+    imdb_votos = ifelse(is.na(imdb_votos), 0, imdb_votos) ,
+    imdb_ID = ifelse(is.na(imdb_ID), "desconocido",imdb_ID)
+  )
 
 
+#Seasons: como los valores Na de esa categoria, significa que es una pelicula, entonces cambiaremos el valor NA por 0
+  netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Temporadas = ifelse(is.na(Temporadas), 0, Temporadas)
+  )
+
+#Borramos los titulos faltantes de la data
+  
+netflix_limpio <- netflix_limpio %>%
+    filter(!is.na(Titulos_producciones))
+#Eliminación de duplicados
+
+netflix_limpio <- netflix_limpio %>%
+  distinct(Titulos_producciones, .keep_all = TRUE)  
+
+
+#Limpieza de datos 
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    #Filtrar años inválidos
+    Año_Lanzamiento = case_when(
+      Año_Lanzamiento < 1700 | Año_Lanzamiento > 2025 ~ NA_real_,
+      TRUE ~ Año_Lanzamiento
+    ),
+    # Filtrar tiempos de reproducción incongruentes 
+    Tiempo = case_when(
+      Tiempo < 1 | Tiempo > 300 ~ NA_real_, 
+      TRUE ~ Tiempo
+    ))
+
+#Limpiar String con comas y doble espacios
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Generos = str_trim(str_replace_all(Generos, ",\\s+", ", ")),  
+         Paises_produccion = str_trim(str_replace_all(Paises_produccion, ",\\s+", ", "))
+  )
+
+ 
+##Crear columnas para los géneros
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Generos_Lista = str_split(Generos, ",\\s*") 
+  )
+
+netflix_limpio <- netflix_limpio %>%
+  separate_rows(Generos, sep = ",\\s*")
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Paises_produccion = str_to_lower(Paises_produccion),
+    Paises_produccion = str_replace_all(Paises_produccion, "\\$|\\$|'", ""),
+    Paises_produccion = str_trim(Paises_produccion)
+  ) %>%
+  separate_rows(Paises_produccion, sep = ",\\s*")
+
+```
+
+```{r}
+netflix_limpio
+```
+
+
+# Resultados y Análisis
+
+##Analisis general del catalogo de Netflix
+
+### 1. Variables Cuantitativas
+
+Se analizaron cinco variables cuantitativas clave: Año_Lanzamiento, Tiempo, Temporadas, tmdb_popularidad y tmdb_puntaje. A continuación, se presentan los principales estadísticos descriptivos:
+
+```{r resumen-estadistico, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Seleccionar variables cuantitativas
+vars_cuantitativas <- netflix_limpio %>%
+  select(Año_Lanzamiento, Tiempo, tmdb_popularidad, tmdb_puntaje)
+
+# Calcular estadísticos descriptivos
+resumen_estadistico <- vars_cuantitativas %>%
+  summarise(
+    Media = sapply(., mean, na.rm = TRUE),
+    Mediana = sapply(., median, na.rm = TRUE),
+    Minimo = sapply(., min, na.rm = TRUE),
+    Maximo = sapply(., max, na.rm = TRUE),
+    Q1 = sapply(., function(x) quantile(x, 0.25, na.rm = TRUE)),
+    Q3 = sapply(., function(x) quantile(x, 0.75, na.rm = TRUE)),
+    Rango_Intercuartil = Q3 - Q1
+  )
+
+# Transponer la tabla
+resumen_estadistico <- t(resumen_estadistico)
+colnames(resumen_estadistico) <- colnames(vars_cuantitativas)
+
+# Formatear según tipo de variable
+resumen_estadistico_formateado <- resumen_estadistico
+resumen_estadistico_formateado[, c("Año_Lanzamiento", "Tiempo")] <- 
+  round(as.numeric(resumen_estadistico_formateado[, c("Año_Lanzamiento", "Tiempo")]), 0)
+
+resumen_estadistico_formateado[, c("tmdb_popularidad", "tmdb_puntaje")] <- 
+  round(as.numeric(resumen_estadistico_formateado[, c("tmdb_popularidad", "tmdb_puntaje")]), 2)
+
+# Mostrar tabla con kable
+kable(resumen_estadistico_formateado, caption = "Resumen estadístico de variables cuantitativas del catálogo de Netflix")
+
+```
+
+
+Con estos datos, se puede comprender diversos datos importante para el conocimiento de la data:
+
+Año de Lanzamiento
+El análisis de esta variable revela una fuerte concentración en contenido contemporáneo. La mediana en 2018 y la media en 2016, sugieren que la mitad de las producciones más recientes se han estrenado en 2018 o posteriormente.El rango intercuartílico pequeño (5 años) refleja que la mayoría de producciones se concentran entre 2015 y 2020. La presencia de valores atípicos (outliers), representados por producciones muy antiguas o muy recientes, explica la dispersión fuera de este intervalo, pero no alteran la tendencia central del catálogo.
+
+
+Tiempo de Duración (Películas)
+Las películas presentan un tiempo promedio de 80 minutos y mediana de 90 minutos, lo que refleja que predominan producciones de una duracion estandar, ni muy cortas ni excesivamente largas. La diferencia entre mínimo y máximo indica la existencia de outliers (películas extremadamente cortas o muy extensas).
+
+
+Popularidad TMDB
+El puntaje promedio de 28.69 es significativamente superior a la mediana de 9.73, lo que indica una distribución sesgada a la derecha.Este patrón estadístico coincide con la realidad de la plataforma, donde un conjunto de grandes éxitos globales destaca notablemente sobre la popularidad general del catálogo.
+
+Puntaje TMDB
+Los puntajes muestran una valoración más consistente y homogénea del contenido. La mediana (6.9) se encuentra muy próxima a la media (6.62), lo que implica que los puntajes de las producciones se concentran de manera estrecha alrededor de estos valores medios. El rango intercuartílico de 1.4 confirma esta baja dispersión, sugiriendo que la mayoría de las producciones obtienen calificaciones de calidad relativamente similares. Esta consistencia indica que el catálogo mantiene un umbral de calidad homogéneo.
+
+### 2. Variables Categóricas
+Tipo de contenido
+
+```{r}
+Tipos_grafic <- netflix_limpio %>%
+  group_by(Tipos) %>%
+  summarise( Count = n(), .groups = "drop")%>%
+  mutate(Porcentaje = round(Count / sum(Count)*100, 2))
+
+grafico_tipos_pie <- ggplot(Tipos_grafic, aes(x ="", y= Count, fill = Tipos)) +
+  geom_bar(stat = "identity", width = 1, color = "white")+
+  geom_text(aes(label = paste0(Porcentaje, "%")),
+            color = "white", size = 5)+
+  scale_fill_manual( values = c( "MOVIE" ="#931B26", "SHOW" = "#37020D"))+
+  coord_polar(theta = "y")+
+  labs(
+    title = "Distribucion de peliculas y series",
+    fill = "Tipo"
+  )+
+  theme_minimal()
+
+print(grafico_tipos_pie)
+
+```
+
+
+Películas (MOVIE) representan aproximadamente el 65.22% del catálogo.
+
+Series (SHOW) representan el 34.78%.
+
+Esto muestra un predominio claro de películas, aunque el porcentaje de series sigue siendo significativo.
+
+```{r}
+
+netflix_limpio <- netflix_limpio %>%
+  mutate(
+    Generos = str_to_lower(Generos),                     
+    Generos = str_replace_all(Generos, "\\[|\\]|'", ""),
+    Generos = str_trim(Generos)                          
+  ) %>%
+  separate_rows(Generos, sep = ",\\s*")
+
+
+conteo_generos <- netflix_limpio%>%
+  group_by(Generos) %>%
+  summarise(Conteo = n(), .groups = "drop") %>%
+  mutate(Porcentaje = round(Conteo / sum(Conteo)*100, 2))
+
+
+grafico_generos <- ggplot(conteo_generos, aes(x = reorder(Generos, Conteo), y = Conteo, fill = Generos)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_manual( values = c( "action" ="#931B26",
+                                 "animation" = "#37020D",
+                                 "comedy" = "#7B0003",
+                                 "fantasy"= "#290F04", 
+                                 "thriller"= "#610013",
+                                 "scifi"= "#185ACC", 
+                                 "drama" = "#FA030B",
+                                 "family"= "#110075", 
+                                 "music"= "#1495EA",
+                                 "horror"= "#5870F4", 
+                                 "crime"= "#60000F",
+                                 "european"= "#AB000F",
+                                 "documentarion"= "",
+                                 "history"="#F2000F",
+                                 "reality"="#F2000F",
+                                 "romance"= "#6490DE",
+                                 "sport"= "#273857",
+                                 "war"= "#F57169",
+                                 "western"="#8F413D"))+
+  
+  labs(
+    title = "Cantidad de producciones por género",
+    x = "Género",
+    y = "Número de producciones"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.y = element_text(size = 10)
+  )
+print(grafico_generos)
+  
+
+```
+
+Los géneros más frecuentes en el catálogo son:
+
+1.Drama
+
+2.Comedy
+
+3.Thriller
+
+4.Action
+
+5.Romance
+
+Esto muestra que Netflix apuesta por géneros populares y de amplio alcance, mientras que géneros más especializados (e.g., Western, Music, History) son menoress. Esta distribución también explica patrones de éxito: los géneros más frecuentes tienden a generar mayor cantidad de producciones con alto puntaje promedio.
+
+# Analisis de exitos
+##

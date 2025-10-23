@@ -697,3 +697,115 @@ ggplot(popularidad_filtrada,
 ```
 
 Este diagrama de burbujas compara la popularidad promedio de producciones por país en las últimas dos décadas. El gráfico muestra una extrema concentración de la popularidad en las décadas de 2010 y 2020, con la década de 2000 teniendo solo un punto atípico (CZ). La mayor cantidad de producciones (tamaño de la burbuja) y los valores más altos de popularidad promedio (color rojo intenso) se asocian principalmente al código [es] (España) en ambas décadas (2010s y 2020s). Esto demuestra que las producciones de España son las más voluminosas y, en promedio, las más populares dentro de este conjunto de países. El resto de los países tiene una cantidad de producciones mucho menor y su popularidad promedio tiende a ser más baja (color rosa claro) y homogénea.
+
+### Hidden Gems
+
+El objetivo de esta sección es identificar las producciones (películas y series) que, a pesar de tener una alta valoración crítica, presentan una baja popularidad, lo que las cataloga como "joyas ocultas" o subvaloradas dentro del catálogo.
+
+#### 1. Metodología de Definición de "Hidden Gems"
+
+Para definir una producción como subvalorada, se establecieron los siguientes umbrales basados en percentiles, lo que asegura que la selección se base en la distribución real de los datos:Baja Popularidad: La popularidad de TMDB (tmdb_popularidad) debe estar por debajo del percentil 40 ($\text{P}_{40}$). Es decir, la producción debe ser menos popular que el 60% del catálogo.Alta Valoración: El puntaje de TMDB (tmdb_puntaje) debe ser igual o superior al percentil 60 ($\text{P}_{60}$). Es decir, la producción debe tener una calificación más alta que el 60% del catálogo.Este enfoque crea un filtro estricto para identificar contenido que es críticamente exitoso pero comercialmente discreto.
+
+```{r}
+## --- Calculamos percentiles
+p40_popularidad <- quantile(netflix_tmdb_pelis$tmdb_popularidad, 0.4, na.rm = TRUE)
+p60_score <- quantile(netflix_tmdb_pelis$tmdb_puntaje, 0.6, na.rm = TRUE)
+
+
+##Ahora hacemos un top 20 de las pelis subvaloradas
+
+hidden_gems_pelis <- netflix_tmdb_pelis %>%
+  filter(tmdb_popularidad < p40_popularidad & tmdb_puntaje > p60_score) %>%
+  arrange(desc(tmdb_puntaje)) %>%
+  slice_head(n = 20) %>%
+  select(Titulos_producciones, Tipos, tmdb_popularidad, tmdb_puntaje)
+
+print(hidden_gems_pelis)
+
+
+##Grafico del top 20 de pelis
+ggplot(hidden_gems_pelis, aes(x = reorder(Titulos_producciones, tmdb_puntaje),  
+                              y = tmdb_puntaje)) +
+  geom_col(fill = "darkred", alpha = 0.9)+
+  coord_flip() +
+  
+  labs(
+    title = "Top 20 Hidden Gems en Netflix",
+    subtitle = "Producciones con alta valoración y baja popularidad",
+    x = "",
+    y = "Puntaje TMDB" 
+  ) +
+  theme_minimal()
+
+```
+2. Correlación entre Puntaje y Popularidad
+
+  El cálculo del coeficiente de correlación de Pearson ($r$) entre el puntaje de crítica (tmdb_puntaje) y la popularidad (tmdb_popularidad) es crucial para entender por qué existen las "Hidden Gems".
+
+
+```{r}
+#¿Cual es la correlacion del puntaje de las peliculas con su popularidad?
+cor_3<- cor(netflix_tmdb_pelis$tmdb_puntaje, netflix_tmdb_pelis$tmdb_popularidad, use="complete.obs")
+
+print(cor_3)
+
+```
+Este valor es extremadamente bajo (muy cercano a cero), lo que indica que no existe una relación lineal significativa entre la alta valoración de una serie y su visibilidad o éxito masivo.
+
+```{r}
+##-----------------Lo mismo con las series----------------
+
+p40_popularidad_series <- quantile(netflix_tmdb_series$tmdb_popularidad, 0.4, na.rm = TRUE)
+p60_score_series<- quantile(netflix_tmdb_series$tmdb_puntaje, 0.6, na.rm = TRUE)
+
+##Ahora hacemos un top 20 de las pelis subvaloradas
+
+hidden_gems_series <- netflix_tmdb_series %>%
+  filter(tmdb_popularidad < p40_popularidad_series & tmdb_puntaje > p60_score_series) %>%
+  arrange(desc(tmdb_puntaje)) %>%
+  slice_head(n = 20) %>%
+  select(Titulos_producciones, Tipos, tmdb_popularidad, tmdb_puntaje)
+
+print(hidden_gems_series)
+
+
+##Grafico del top 20 de pelis
+ggplot(hidden_gems_series, aes(x = reorder(Titulos_producciones, tmdb_puntaje),  
+                               y = tmdb_puntaje)) +
+  geom_col(fill = "darkred", alpha = 0.9) +
+  coord_flip() +
+  
+  labs(
+    title = "Top 20 Hidden Gems en Netflix",
+    subtitle = "Producciones con alta valoración y baja popularidad",
+    x = "",
+    y = "Puntaje TMDB" 
+  ) +
+  theme_minimal()
+
+
+
+```
+
+
+```{r}
+
+#¿Cual es la correlacion del puntaje de las series con su popularidad?
+cor4 <- cor(netflix_tmdb_series$tmdb_puntaje, netflix_tmdb_series$tmdb_popularidad, use="complete.obs")
+
+print(cor4)
+```
+No existe una relación lineal significativa entre la valoración que los usuarios dan a una serie (su puntaje) y qué tan popular se vuelve.
+Una serie con una alta puntuación no garantiza una alta popularidad, y una serie altamente popular no necesariamente tiene una alta puntuación. La variabilidad en la popularidad está explicada por factores ajenos a la calidad de la producción.
+
+En conclusión, la correlación de $r = 0.1056$ demuestra que, en el catálogo de Netflix, la calidad y el éxito de visibilidad son dos dimensiones casi independientes para las series.
+
+
+
+En resumen, la identificación de estas "Hidden Gems" a través de los percentiles permite a Netflix identificar contenido de alta calidad que requiere una mayor visibilidad y promoción, capitalizando el potencial no aprovechado de estas producciones subvaloradas por la audiencia general.
+
+
+
+
+
+

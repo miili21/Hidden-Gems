@@ -2,6 +2,9 @@ import os
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 # -------------------- CONFIGURACIÓN GENERAL --------------------
 st.set_page_config(
@@ -134,3 +137,77 @@ df_filtrado = netflix[
 if df_filtrado.empty:
     st.warning("No hay datos que cumplan con los filtros seleccionados")
 
+# -------------------- Pestañas --------------------
+tab1, tab2, tab3 = st.tabs(["Catálogo", "Análisis de Éxito", "💎 Hidden Gems"])
+
+# ----------- TAB 1: Catalogo -----------
+with tab1:
+    st.header("Catálogo de Netflix")
+    st.write("""
+    En este apartado podrás explorar cómo está compuesto el catálogo de Netflix: 
+    su distribución por géneros, tipos de contenido, duración y su evolución a lo largo del tiempo.
+    """)
+
+    # Métricas principales
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total de producciones", netflix.shape[0])
+    col2.metric("Popularidad promedio (TMDB)", round(netflix["Popularidad"].mean(), 2))
+    col3.metric("Puntaje promedio (TMDB)", round(netflix["Puntaje"].mean(), 2))
+
+    st.subheader("Tabla de datos")
+    st.dataframe(netflix[["Titulo", "Tipo", "Genero", "Pais", "Duracion", "Temporadas", "Popularidad", "Puntaje", "Ano"]].head(50))
+
+    # Gráficos resumen
+    st.subheader(" Distribución general del catálogo")
+
+
+    fig_tipo = px.pie(netflix, names="Tipo", title="Distribución por tipo de contenido",
+                          color_discrete_sequence=["#E50914", "#B20710"])
+    fig_tipo.update_layout(template="plotly_dark")
+    st.plotly_chart(fig_tipo, use_container_width=True)
+
+    st.subheader("Evolución en el tiempo")
+    fig_tiempo = px.histogram(netflix, x="Ano", color="Tipo", nbins=40,
+                              title="Cantidad de producciones por año",
+                              color_discrete_sequence=["#E50914", "#B20710"])
+    fig_tiempo.update_layout(template="plotly_dark")
+    st.plotly_chart(fig_tiempo, use_container_width=True)
+
+    st.subheader("Distribución del número de temporadas (Series)")
+    fig_temp = px.box(netflix[netflix["Tipo"] == "SHOW"], y="Temporadas",
+                      title="Distribución del número de temporadas",
+                      color_discrete_sequence=["#E50914"])
+    fig_temp.update_layout(template="plotly_dark")
+    st.plotly_chart(fig_temp, use_container_width=True)
+
+st.subheader("Análisis de Correlaciones entre Variables (Duración, Popularidad, Puntaje, Temporadas)")
+
+# Seleccionamos las variables numéricas relevantes
+corr_vars = netflix[["Duracion", "Popularidad", "Puntaje", "Temporadas"]].corr()
+
+# Creamos el heatmap
+fig_corr, ax = plt.subplots(figsize=(6, 4))
+sns.heatmap(corr_vars, annot=True, cmap="Reds", fmt=".2f", linewidths=0.5, ax=ax)
+ax.set_title("Matriz de Correlación", color="white", fontsize=12)
+fig_corr.patch.set_facecolor('#141414')
+ax.set_facecolor('#141414')
+st.pyplot(fig_corr)
+
+st.write(
+    """-Relación entre Popularidad y Puntaje
+Se observa una correlación positiva moderada (aproximadamente entre 0.45 y 0.6 dependiendo de la muestra).
+Esto significa que las producciones con mejores puntuaciones de crítica tienden a ser más populares, aunque no siempre ocurre.""")
+st.write("""
+        -Relación entre Duración y Popularidad
+La correlación fue baja o cercana a cero, lo que indica que la duración de una película o serie no influye 
+directamente en su popularidad. Tanto películas cortas como largas pueden tener buena o mala recepción, dependiendo más de 
+su contenido que de su extensión.""")
+st.write("""
+        -Relación entre Duración y Puntaje
+También se encontró una correlación débil. Esto refuerza la idea de que la duración no determina la calidad 
+percibida.""")
+st.write("""
+        -Relación entre Temporadas y Popularidad (solo series)
+
+Aquí suele aparecer una correlación positiva leve, indicando que las series con más temporadas tienden a mantener
+mayor popularidad. Esto puede deberse a que las series más exitosas se renuevan, acumulando tanto popularidad como temporadas.""")

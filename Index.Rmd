@@ -25,14 +25,14 @@ El problema principal radica en que gran parte del consumo de los usuarios provi
 Ante esta situación, se prefiere escoger un enfoque empírico a partir de información concreta obtenida del dataset, aplicando limpieza, análisis exploratorio multivariado y criterios reproducibles para rankear posibles gemas, buscando observar patrones y resultados reales. La propuesta busca analizar los datos del catálogo para identificar los factores que determinan la popularidad o invisibilidad de una producción, y detectar de forma efectiva las “gemas ocultas“, es decir, aquellas películas y series con buenas valoraciones pero baja popularidad.
 
 
-# Objetivos 
-## Objetivo general
+## Objetivos 
+### Objetivo general
 
 
 Analizar los datos del catálogo de Netflix para identificar los factores relacionados a la popularidad y visibilidad de las producciones e identificar un conjunto reproducible de “gemas ocultas”.
 
 
-## Objetivos específicos
+### Objetivos específicos
 
 1. Realizar la carga y limpieza reproducible del dataset base, asegurando nombres consistentes y formatos adecuados (fechas, duración, géneros).
 
@@ -43,18 +43,18 @@ Analizar los datos del catálogo de Netflix para identificar los factores relaci
 4. Proponer y aplicar un criterio reproducible para identificar las 20 “gemas ocultas”.
 
     
-# Marco metodológico
+## Marco metodológico
 
-## Enfoque de la investigación
+### Enfoque de la investigación
 El enfoque es cuantitativo y descriptivo. Con el objetivo principal de medir y explicar relaciones entre variables numéricas y cualitativas; además, las elecciones de umbral de gemas, manejo de outliers, dependen de estadísticas reproducibles y cuantificables.
 
-## Tipo de investigación
+### Tipo de investigación
 La investigación es descriptiva y correlacional con elementos exploratorios, se enfoca en describir el catálogo,  explorar distintas variables y analizar asociaciones y tendencias temporales que podrán servir de base para trabajos predictivos futuros.
 
-## Periodo de referencia
+### Periodo de referencia
 El periodo de análisis viene de las fechas disponibles en `date_added` y `release_year`. Se sugiere usar todo el rango disponible en el dataset para maximizar la inferencia histórica, y subanálisis por década para mejorar interpretabilidad. La elección por décadas facilita comparaciones históricas sin suponer continuidad mensual uniforme.
 
-## Procesamiento y análisis de datos (pasos reproducibles)
+### Procesamiento y análisis de datos (pasos reproducibles)
 1) Carga de librerías y dataset
 
 
@@ -258,7 +258,7 @@ netflix_limpio
 
 # Resultados y Análisis
 
-##Analisis general del catalogo de Netflix
+## Analisis general del catalogo de Netflix
 
 ### 1. Variables Cuantitativas
 
@@ -417,8 +417,8 @@ Los géneros más frecuentes en el catálogo son:
 
 Esto muestra que Netflix apuesta por géneros populares y de amplio alcance, mientras que géneros más especializados (e.g., Western, Music, History) son menoress. Esta distribución también explica patrones de éxito: los géneros más frecuentes tienden a generar mayor cantidad de producciones con alto puntaje promedio.
 
-# Analisis de exitos
-##Análisis general de los patrones de éxito en el catálogo de Netflix
+## Analisis de exitos
+### Análisis general de los patrones de éxito en el catálogo de Netflix
 
 El análisis busca identificar los factores asociados al éxito de las producciones del catálogo, medido principalmente a través de las variables tmdb_popularidad (popularidad) y tmdb_puntaje (calificación).
 Para ello, se se elaboraron visualizaciones comparativas por década, tipo de contenido, duración, género y país de origen.
@@ -698,7 +698,7 @@ ggplot(popularidad_filtrada,
 
 Este diagrama de burbujas compara la popularidad promedio de producciones por país en las últimas dos décadas. El gráfico muestra una extrema concentración de la popularidad en las décadas de 2010 y 2020, con la década de 2000 teniendo solo un punto atípico (CZ). La mayor cantidad de producciones (tamaño de la burbuja) y los valores más altos de popularidad promedio (color rojo intenso) se asocian principalmente al código [es] (España) en ambas décadas (2010s y 2020s). Esto demuestra que las producciones de España son las más voluminosas y, en promedio, las más populares dentro de este conjunto de países. El resto de los países tiene una cantidad de producciones mucho menor y su popularidad promedio tiende a ser más baja (color rosa claro) y homogénea.
 
-### Hidden Gems
+## Hidden Gems
 
 El objetivo de esta sección es identificar las producciones (películas y series) que, a pesar de tener una alta valoración crítica, presentan una baja popularidad, lo que las cataloga como "joyas ocultas" o subvaloradas dentro del catálogo.
 
@@ -807,5 +807,31 @@ En resumen, la identificación de estas "Hidden Gems" a través de los percentil
 
 
 
+# Conclusiones 
 
+El análisis cuantitativo de la plataforma establece que la visibilidad de las producciones depende primariamente de factores de actualidad y género, y no de la calidad intrínseca del contenido.
+
+## 1. Impulsores del Éxito (Popularidad)
+
+La popularidad en Netflix está impulsada por el sesgo temporal y la temática: 
+
+Actualidad y Cantidad: El catálogo está masivamente concentrado en producciones lanzadas entre 2015 y 2020. El éxito y la alta popularidad son casi exclusivos de estas décadas recientes. La estrategia de la plataforma se basa en el volumen de contenido actual y de duración estándar (películas de $\approx 100$ minutos, series de $\approx 40$ minutos por episodio).
+
+Géneros Dominantes: Los picos de popularidad son alcanzados por géneros de alto impacto como Acción, Crimen, Ciencia Ficción (Scifi) y Animación. En contraste, la producción de España ([es]) destaca como la más voluminosa y popular en promedio dentro de las producciones por país analizadas.
+
+## 2. Desconexión Calidad-Popularidad
+
+El análisis de correlación demuestra una desvinculación clave entre la valoración y el éxito masivo:
+
+Correlación Nula ($r \approx 0$): La duración de las producciones ($r \approx 0.02$ para películas; $r \approx 0.07$ para series) y, más críticamente, la calidad crítica (Puntaje TMDB) con la Popularidad de las series ($r = 0.1056$) presentan una correlación insignificante.
+
+Implicación: La alta calidad crítica no garantiza la popularidad. La visibilidad está dominada por el algoritmo y el marketing, no por el mérito.
+
+## 3. El Fenómeno de las "Hidden Gems"
+
+La metodología de "Hidden Gems"se valida estadísticamente por esta baja correlación, identificando:
+
+Obras Subvaloradas: Las "Gemas Ocultas" son el resultado directo de la desconexión: producciones con alta valoración ($\text{Puntaje} > \text{P}_{60}$) que han sido invisibles ($\text{Popularidad} < \text{P}_{40}$).
+
+Conclusión: La promoción algorítmica y editorial debe enfocarse en este segmento subvalorado para corregir el ciclo de visibilidad desigual y capitalizar la calidad crítica existente en el catálogo.
 

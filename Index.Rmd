@@ -198,6 +198,57 @@ netflix_limpio <- netflix_limpio %>%
   ) %>%
   separate_rows(Paises_produccion, sep = ",\\s*")
 
+options(encoding = "UTF-8")
+Sys.setlocale("LC_ALL", "es_ES.UTF-8")
+
+```
+
+```{r}
+#Paso 2: Crear variables y organizar la data de la manera necesaria para realizar la investigación
+  ##Creamos una varible sobre Decadas 
+  netflix_limpio<- netflix_limpio%>%
+  mutate(
+    decada = case_when(
+      Año_Lanzamiento < 1950 ~ "1940´s",
+      Año_Lanzamiento < 1960 ~ "1950´s",
+      Año_Lanzamiento < 1970 ~ "1960´s",
+      Año_Lanzamiento < 1980 ~ "1970´s",
+      Año_Lanzamiento < 1990 ~ "1980's",
+      Año_Lanzamiento < 2000 ~ "1990's",
+      Año_Lanzamiento < 2010 ~ "2000's",
+      Año_Lanzamiento < 2020 ~ "2010´s",
+      Año_Lanzamiento >= 2020 ~ "2020's"
+    )
+  )
+
+  
+  ##Creamos dos tablas, una con la información de imdb y otra con la información de tmdb
+
+vars_tmdb <- c("ID", "Titulos_producciones", "Tipos", "Año_Lanzamiento", "Temporadas", "Tiempo", "Certificacion_edad", "Generos", "Paises_produccion",
+               "tmdb_popularidad", "tmdb_puntaje", "decada")
+
+netflix_tmdb <- netflix_limpio %>%
+  select(all_of(vars_tmdb))
+
+netflix_tmdb_pelis <- netflix_tmdb %>%
+  filter(Tipos == "MOVIE")
+
+##Filtrar las películas y series de las tablas de tmdb
+
+
+###Tablas de películas y series para tmdb
+
+netflix_tmdb_pelis <- netflix_tmdb %>%
+  filter(Tipos == "MOVIE")
+
+netflix_tmdb_series <- netflix_tmdb %>%
+  filter(Tipos == "SHOW")
+
+
+#Mejoras, por si acaso, antes de realizar las estadisticas
+netflix_limpio <- netflix_limpio %>%
+  mutate(across(c(Tiempo, tmdb_popularidad, tmdb_puntaje), as.numeric))
+
 ```
 
 ```{r}
@@ -367,4 +418,282 @@ Los géneros más frecuentes en el catálogo son:
 Esto muestra que Netflix apuesta por géneros populares y de amplio alcance, mientras que géneros más especializados (e.g., Western, Music, History) son menoress. Esta distribución también explica patrones de éxito: los géneros más frecuentes tienden a generar mayor cantidad de producciones con alto puntaje promedio.
 
 # Analisis de exitos
-##
+##Análisis general de los patrones de éxito en el catálogo de Netflix
+
+El análisis busca identificar los factores asociados al éxito de las producciones del catálogo, medido principalmente a través de las variables tmdb_popularidad (popularidad) y tmdb_puntaje (calificación).
+Para ello, se se elaboraron visualizaciones comparativas por década, tipo de contenido, duración, género y país de origen.
+
+#### 1.Popularidad por género y década
+
+```{r}
+# Calcular la popularidad promedio por género (solo películas)
+top10_generos <- netflix_tmdb_pelis %>%
+  group_by(Generos) %>%
+  summarise(popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE)) %>%
+  arrange(desc(popularidad_promedio)) %>%
+  slice_head(n = 10) %>%
+  pull(Generos)
+
+# Filtrar el dataset original solo con esos 20 géneros
+netflix_tmdb_pelis_top10 <- netflix_tmdb_pelis %>%
+  filter(Generos %in% top10_generos)
+
+# Volver a graficar solo con esos géneros
+genero_popularidad_pelis_top10 <- ggplot(netflix_tmdb_pelis_top10, 
+                                         aes(x = decada, y = tmdb_popularidad, fill = Generos)) +
+  geom_col(alpha = 0.85, color = "white") +
+  scale_fill_manual(values = c("action" ="#931B26",
+                               "animation" = "#37020D",
+                               "comedy" = "#7B0003",
+                               "fantasy"= "#290F04", 
+                               "thriller"= "#610013",
+                               "scifi"= "#185ACC", 
+                               "drama" = "#FA030B",
+                               "family"= "#110075", 
+                               "music"= "#1495EA",
+                               "horror"= "#5870F4", 
+                               "crime"= "#60000F",
+                               "european"= "#AB000F",
+                               "documentary"= "#CF4C4C",
+                               "history"="#F2000F",
+                               "reality"="#F2000F",
+                               "romance"= "#6490DE",
+                               "sport"= "#273857",
+                               "war"= "#F57169",
+                               "western"="#8F413D")) +
+  coord_flip() +
+  labs(title = "Top 10 géneros más populares de películas por década en Netflix",
+       subtitle = "Basado en la variable tmdb_popularidad",
+       x = "Década",
+       y = "Popularidad promedio",
+       fill = "Género") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+
+# Mostrar el gráfico
+print(genero_popularidad_pelis_top10)
+```
+
+
+Los gráficos de barras muestran la evolución del éxito por género a lo largo de las décadas, diferenciando entre películas y series:
+
+El análisis de la popularidad promedio de los géneros revela una clara concentración de las películas más populares en las décadas recientes, principalmente la de 2010 y 2020, con las películas más antiguas prácticamente sin representación en los puntajes altos. Aunque la mayoría de los géneros se sitúan en un rango de popularidad promedio bajo, los picos más altos, que superan las 100.000 unidades, están impulsados consistentemente por géneros como Acción, Crimen, Animación y Ciencia Ficción.
+
+```{r}
+
+# --- Calcular el top 10 de géneros más populares ---
+top10_generos_series <- netflix_tmdb_series %>%
+  group_by(Generos) %>%
+  summarise(popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE)) %>%
+  arrange(desc(popularidad_promedio)) %>%
+  slice_head(n = 10) %>%
+  pull(Generos)
+
+# --- Filtrar dataset solo con esos géneros ---
+netflix_tmdb_series_top10 <- netflix_tmdb_series %>%
+  filter(Generos %in% top10_generos_series)
+
+# --- Graficar ---
+genero_popularidad_series_top10 <- ggplot(netflix_tmdb_series_top10 , aes(x = decada, y = tmdb_popularidad, fill = Generos)) +
+  geom_col(alpha = 0.85, color = "white") +
+  scale_fill_manual(values = c("action" ="#931B26",
+                               "animation" = "#37020D",
+                               "comedy" = "#7B0003",
+                               "fantasy"= "#290F04", 
+                               "thriller"= "#610013",
+                               "scifi"= "#185ACC", 
+                               "drama" = "#FA030B",
+                               "family"= "#110075", 
+                               "music"= "#1495EA",
+                               "horror"= "#5870F4", 
+                               "crime"= "#60000F",
+                               "european"= "#AB000F",
+                               "documentarion"= "",
+                               "history"="#F2000F",
+                               "reality"="#F2000F",
+                               "romance"= "#6490DE",
+                               "sport"= "#273857",
+                               "war"= "#F57169",
+                               "western"="#8F413D")) +
+  coord_flip() +
+  labs(title = "Popularidad promedio de las series por género y década en Netflix",
+       subtitle = "Basado en la variable tmdb_popularidad",
+       x = "Década",
+       y = "Popularidad promedio",
+       fill = "Género") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+
+# --- Mostrar el gráfico ---
+print(genero_popularidad_series_top10)
+```
+
+
+El análisis de las series en Netflix muestra una situación similar a la de las películas, con la popularidad promedio concentrada en las décadas de 2010 y 2020. El rango de popularidad es muy amplio, pero la mayoría de las series se agrupan en valores bajos (cerca de 0). Los picos de popularidad más altos, que superan las 50.000 unidades, están impulsados por géneros como Crimen, Drama y Acción, y de manera notoria, el género de Ciencia Ficción, que alcanza algunos de los valores más altos. Al igual que en las películas, las series de las décadas anteriores a 2000 tienen una popularidad promedio muy baja o nula.
+
+En conjunto, los resultados indican que la diversificación de géneros ha sido clave en la expansión del catálogo, aunque los géneros narrativos clásicos siguen concentrando el mayor éxito.
+
+
+#### 3. Evolución temporal de la duración promedio
+
+El gráfico de líneas que relaciona la duración promedio por tipo de contenido a lo largo de las décadas muestra una tendencia diferenciada
+
+```{r}
+# Grafico de lineas
+##------------------Calcular la duracion promedio por tipo de contenido
+netflix_limpio %>%
+  group_by(decada, Tipos) %>%
+  summarise(duracion_promedio = mean(Tiempo, na.rm = TRUE)) %>%
+  
+  ggplot(aes(x = decada, y = duracion_promedio, color = Tipos, group = Tipos)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3, shape = 21, fill = "white", stroke = 1.2) +
+  scale_x_discrete() +
+  labs(title = "Evolución de la duración promedio por tipo de contenido",
+       x = "Década", y = "Duración promedio", color = "Tipos") + 
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+Este gráfico de líneas muestra tendencias opuestas en la duración promedio del contenido a lo largo de las décadas. La duración promedio de las películas (línea roja) ha ido disminuyendo constantemente desde su punto máximo en los años 1960 (casi 140 minutos) hasta estabilizarse en torno a los 100 minutos en la actualidad. Por otro lado, la duración promedio de los episodios de las series (línea azul), aunque se mantuvo baja en los 80 y 90, ha experimentado un ligero pero constante aumento desde los 2000, sugiriendo que los episodios de series se han hecho un poco más largos recientemente, mientras que las películas son cada vez más cortas en promedio.
+
+####4. Relación entre duración y popularidad
+```{r}
+##----------------Calcular la duracion promedio y la popularidad de las pelis
+
+duracion_popularidad_decada <- netflix_tmdb_pelis %>%
+  group_by(decada) %>%
+  summarise(
+    duracion_promedio = mean(Tiempo, na.rm = TRUE),
+    popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE),
+    cantidad = n()
+  )
+
+
+ggplot(duracion_popularidad_decada, aes(x = duracion_promedio, y = popularidad_promedio)) +
+  geom_point(aes(size = cantidad, color = decada), alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "white", linetype = "dashed") +
+  labs(
+    title = "Relación entre Duración Promedio y Popularidad de Películas",
+    subtitle = "Cada punto representa una década y el tamaño indica cantidad de películas",
+    x = "Duración promedio ",
+    y = "Popularidad promedio ",
+    size = "Cantidad de películas",
+    color = "Década"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+#Correlacion del tiempo con la popularidad
+correlacion_1 <- cor(netflix_tmdb_pelis$Tiempo, netflix_tmdb_pelis$tmdb_popularidad, use="complete.obs")
+
+print(correlacion_1)
+
+```
+Este diagrama de burbujas, que compara la duración promedio con la popularidad de las películas por década, revela que la mayor parte del catálogo de Netflix se concentra en el contenido más reciente y corto. Las burbujas más grandes, que representan la mayor cantidad de películas, corresponden a las décadas de 2010 y 2020; estas películas son las más cortas (cercanas a 100 minutos) y tienen una popularidad promedio baja a moderada. Por otro lado, las películas más antiguas (1960s y 1970s) tienen duraciones más largas (cercanas a 150 minutos) y, aunque su popularidad es variada, la cantidad de títulos es mínima, lo que demuestra que Netflix prioriza la cantidad de producciones actuales y de duración estándar sobre el contenido histórico más extenso.
+
+El resultado $r = 0.0235$ establece que no existe una relación lineal significativa entre la duración promedio de las películas y su nivel de popularidad. Al ser positivo, sugiere una relación lineal directa muy débil.En términos prácticos, el tiempo que dura una película (si son 90 o 150 minutos) no es un factor determinante para predecir qué tan popular será en la plataforma.
+
+
+```{r}
+##----------------Calcular la duracion promedio y la popularidad de las pelis
+
+duracion_popularidad_decada <- netflix_tmdb_series %>%
+  group_by(decada) %>%
+  summarise(
+    duracion_promedio = mean(Tiempo, na.rm = TRUE),
+    popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE),
+    cantidad = n()
+  )
+
+
+ggplot(duracion_popularidad_decada, aes(x = duracion_promedio, y = popularidad_promedio)) +
+  geom_point(aes(size = cantidad, color = decada), alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "white", linetype = "dashed") +
+  labs(
+    title = "Relación entre Duración Promedio y Popularidad de Series",
+    subtitle = "Cada punto representa una década y el tamaño indica la cantidad de series",
+    x = "Duración promedio",
+    y = "Popularidad promedio",
+    size = "Cantidad de series",
+    color = "Década"
+  ) +
+  theme_minimal()
+```
+
+Este diagrama de burbujas, que compara la duración promedio de los episodios con la popularidad de las series por década, muestra que la popularidad más alta no se asocia a un patrón claro de duración. Las dos burbujas más grandes, que representan la mayor cantidad de series (décadas de 2010 y 2020), tienen una duración promedio muy similar (alrededor de 38 a 40 minutos), pero su popularidad promedio varía ligeramente. Los picos de popularidad son alcanzados por series de décadas anteriores (1990s y 1980s), cuyas burbujas son mucho más pequeñas (menos cantidad de series), con duraciones que varían entre los 25 y 35 minutos. Esto demuestra que la mayor parte del catálogo de Netflix se centra en series con episodios de duración estándar (cerca de 40 minutos), pero la popularidad extrema es un fenómeno raro y disperso, sin depender directamente de si el episodio es corto o largo.
+
+
+```{r}
+#Correlacion del tiempo con la popularidad
+correlacion_2<- cor(netflix_tmdb_series$Tiempo, netflix_tmdb_series$tmdb_popularidad, use="complete.obs")
+
+
+print(correlacion_2)
+```
+El resultado $r = 07661694$ establece que no existe una relación lineal significativa entre la duración promedio de las películas y su nivel de popularidad.
+
+
+#### 5. Popularidad por país y década (gráfico de burbujas)
+
+```{r}
+#Grafico de burbuja
+
+##----------- Calcular la popularidad promedio por país y década
+
+netflix_tmdb_pelis <- netflix_tmdb_pelis %>%
+  mutate(
+    Paises_produccion = str_to_lower(Paises_produccion),                     
+    Paises_produccion = str_replace_all(Paises_produccion, "'", ""),
+    Paises_produccion = str_trim(Paises_produccion)                          
+  ) %>%
+  separate_rows(Generos, sep = ",\\s*")
+
+
+popularidad_pais_decada <- netflix_tmdb_pelis %>%
+  group_by(decada, Paises_produccion) %>%
+  summarise(
+    popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE),
+    cantidad = n(),
+    .groups = "drop"
+  )
+
+## Calcular top 10 más y menos populares 
+ranking_paises <- popularidad_pais_decada %>%
+  group_by(Paises_produccion) %>%
+  summarise(popularidad_global = mean(popularidad_promedio, na.rm = TRUE)) %>%
+  arrange(desc(popularidad_global))
+
+top_10_mas <- ranking_paises %>% slice_head(n = 10)
+top_10_menos <- ranking_paises %>% slice_tail(n = 10)
+
+paises_filtrados <- bind_rows(top_10_mas, top_10_menos)
+
+## Filtrar el dataset principal 
+popularidad_filtrada <- popularidad_pais_decada %>%
+  filter(Paises_produccion %in% paises_filtrados$Paises_produccion)
+
+# --- Gráfico de burbujas para ver la popularidad segun el pais y la decadas 
+ggplot(popularidad_filtrada, 
+       aes(x = factor(decada), 
+           y = reorder(Paises_produccion, popularidad_promedio),
+           size = cantidad, 
+           color = popularidad_promedio)) +
+  geom_point(alpha = 0.85) +
+  scale_color_gradient(low = "#FF6B6B", high = "darkred") +
+  scale_size(range = c(2, 10)) +
+  labs(
+    title = "Popularidad promedio por país y década (Top 10 mas populares y top 10menos populares)",
+    subtitle = "Comparación de los países más y menos populares según TMDB",
+    x = "Década",
+    y = "País",
+    color = "Popularidad promedio",
+    size = "Cantidad de producciones"
+  ) +
+  theme_minimal()
+```
+
+Este diagrama de burbujas compara la popularidad promedio de producciones por país en las últimas dos décadas. El gráfico muestra una extrema concentración de la popularidad en las décadas de 2010 y 2020, con la década de 2000 teniendo solo un punto atípico (CZ). La mayor cantidad de producciones (tamaño de la burbuja) y los valores más altos de popularidad promedio (color rojo intenso) se asocian principalmente al código [es] (España) en ambas décadas (2010s y 2020s). Esto demuestra que las producciones de España son las más voluminosas y, en promedio, las más populares dentro de este conjunto de países. El resto de los países tiene una cantidad de producciones mucho menor y su popularidad promedio tiende a ser más baja (color rosa claro) y homogénea.

@@ -9,9 +9,10 @@ library(here)
 library(stringr)
 
 
+
 ##Cargar el dataset
 
-ruta_BD_Netflix <- "C:\\Users\\3340\\OneDrive\\Escritorio\\UCV\\Sem 1\\COMPU 1\\Proyecto\\1111111\\Hidden-Gems\\Data\\netflix_dataset.csv"
+ruta_BD_Netflix <- "C:\\Users\\Admin\\Documents\\GitHub\\Hidden-Gems\\netflix_dataset.csv"
 
 netflix<- read_csv(ruta_BD_Netflix)
 
@@ -502,8 +503,8 @@ grafico_tipos_bar <- ggplot(netflix_limpio, aes(x = Tipos, fill = Tipos)) +
     x = "Tipo",
     y = "Cantidad"
   ) +
-  theme_minimal() +  # Llama a theme_minimal() sin argumentos
-  theme(  # Aquí van las personalizaciones
+  theme_minimal() + 
+  theme(  
     plot.title = element_text(hjust = 0.5, face = "bold", color = "#37020D")
   )
 
@@ -626,15 +627,21 @@ ggplot(netflix_sin_outliers_temp, aes(x= "" , y = Temporadas)) +
 
 ## Grafico de barras (peliculas)
 
-netflix_tmdb_pelis <- netflix_tmdb_pelis %>%
-  mutate(
-    Generos = str_to_lower(Generos),                     
-    Generos = str_replace_all(Generos, "\\[|\\]|'", ""),
-    Generos = str_trim(Generos)                          
-  ) %>%
-  separate_rows(Generos, sep = ",\\s*")
+# Calcular la popularidad promedio por género (solo películas)
+top10_generos <- netflix_tmdb_pelis %>%
+  group_by(Generos) %>%
+  summarise(popularidad_promedio = mean(tmdb_popularidad, na.rm = TRUE)) %>%
+  arrange(desc(popularidad_promedio)) %>%
+  slice_head(n = 10) %>%
+  pull(Generos)
 
-ggplot(netflix_tmdb_pelis , aes(x = decada, y = tmdb_popularidad, fill = Generos)) +
+# Filtrar el dataset original solo con esos 20 géneros
+netflix_tmdb_pelis_top10 <- netflix_tmdb_pelis %>%
+  filter(Generos %in% top10_generos)
+
+# Volver a graficar solo con esos géneros
+genero_popularidad_pelis_top10 <- ggplot(netflix_tmdb_pelis_top10, 
+                                         aes(x = decada, y = tmdb_popularidad, fill = Generos)) +
   geom_col(alpha = 0.85, color = "white") +
   scale_fill_manual(values = c("action" ="#931B26",
                                "animation" = "#37020D",
@@ -648,7 +655,7 @@ ggplot(netflix_tmdb_pelis , aes(x = decada, y = tmdb_popularidad, fill = Generos
                                "horror"= "#5870F4", 
                                "crime"= "#60000F",
                                "european"= "#AB000F",
-                               "documentarion"= "",
+                               "documentary"= "#CF4C4C",
                                "history"="#F2000F",
                                "reality"="#F2000F",
                                "romance"= "#6490DE",
@@ -656,13 +663,17 @@ ggplot(netflix_tmdb_pelis , aes(x = decada, y = tmdb_popularidad, fill = Generos
                                "war"= "#F57169",
                                "western"="#8F413D")) +
   coord_flip() +
-  labs(title = "Popularidad promedio de las peliculas por género y década en Netflix",
+  labs(title = "Top 10 géneros más populares de películas por década en Netflix",
        subtitle = "Basado en la variable tmdb_popularidad",
        x = "Década",
        y = "Popularidad promedio",
        fill = "Género") +
   theme_minimal(base_size = 13) +
   theme(legend.position = "bottom")
+
+# Mostrar el gráfico
+print(genero_popularidad_pelis_top10)
+
 
 ## Grafico de barras (series)
 

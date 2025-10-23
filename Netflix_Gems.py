@@ -90,6 +90,7 @@ netflix = netflix.assign(
 # Agregar la variable de década
 netflix["Decada"] = netflix["Ano"].apply(lambda x: f"{x//10*10}s")
 
+
 # -------------------- Opciones laterales --------------------
 with st.sidebar:
     st.header("Filtrea tus gemas")
@@ -180,34 +181,76 @@ with tab1:
     fig_temp.update_layout(template="plotly_dark")
     st.plotly_chart(fig_temp, use_container_width=True)
 
-st.subheader("Análisis de Correlaciones entre Variables (Duración, Popularidad, Puntaje, Temporadas)")
+    st.subheader("Análisis de Correlaciones entre Variables (Duración, Popularidad, Puntaje, Temporadas)")
 
-# Seleccionamos las variables numéricas relevantes
-corr_vars = netflix[["Duracion", "Popularidad", "Puntaje", "Temporadas"]].corr()
+    # Seleccionamos las variables numéricas relevantes
+    corr_vars = netflix[["Duracion", "Popularidad", "Puntaje", "Temporadas"]].corr()
 
-# Creamos el heatmap
-fig_corr, ax = plt.subplots(figsize=(6, 4))
-sns.heatmap(corr_vars, annot=True, cmap="Reds", fmt=".2f", linewidths=0.5, ax=ax)
-ax.set_title("Matriz de Correlación", color="white", fontsize=12)
-fig_corr.patch.set_facecolor('#141414')
-ax.set_facecolor('#141414')
-st.pyplot(fig_corr)
+    # Creamos el heatmap
+    fig_corr, ax = plt.subplots(figsize=(6, 4))
+    sns.heatmap(corr_vars, annot=True, cmap="Reds", fmt=".2f", linewidths=0.5, ax=ax)
+    ax.set_title("Matriz de Correlación", color="white", fontsize=12)
+    fig_corr.patch.set_facecolor('#ffffff')
+    ax.set_facecolor('#ffffff')
+    st.pyplot(fig_corr)
 
-st.write(
-    """-Relación entre Popularidad y Puntaje
-Se observa una correlación positiva moderada (aproximadamente entre 0.45 y 0.6 dependiendo de la muestra).
-Esto significa que las producciones con mejores puntuaciones de crítica tienden a ser más populares, aunque no siempre ocurre.""")
-st.write("""
-        -Relación entre Duración y Popularidad
-La correlación fue baja o cercana a cero, lo que indica que la duración de una película o serie no influye 
-directamente en su popularidad. Tanto películas cortas como largas pueden tener buena o mala recepción, dependiendo más de 
-su contenido que de su extensión.""")
-st.write("""
-        -Relación entre Duración y Puntaje
-También se encontró una correlación débil. Esto refuerza la idea de que la duración no determina la calidad 
-percibida.""")
-st.write("""
-        -Relación entre Temporadas y Popularidad (solo series)
+    st.write(
+        """-Relación entre Popularidad y Puntaje
+    Se observa una correlación positiva moderada (aproximadamente entre 0.45 y 0.6 dependiendo de la muestra).
+    Esto significa que las producciones con mejores puntuaciones de crítica tienden a ser más populares, aunque no siempre ocurre.""")
+    st.write("""
+            -Relación entre Duración y Popularidad
+    La correlación fue baja o cercana a cero, lo que indica que la duración de una película o serie no influye 
+    directamente en su popularidad. Tanto películas cortas como largas pueden tener buena o mala recepción, dependiendo más de 
+    su contenido que de su extensión.""")
+    st.write("""
+            -Relación entre Duración y Puntaje
+    También se encontró una correlación débil. Esto refuerza la idea de que la duración no determina la calidad 
+    percibida.""")
+    st.write("""
+            -Relación entre Temporadas y Popularidad (solo series)
 
-Aquí suele aparecer una correlación positiva leve, indicando que las series con más temporadas tienden a mantener
-mayor popularidad. Esto puede deberse a que las series más exitosas se renuevan, acumulando tanto popularidad como temporadas.""")
+    Aquí suele aparecer una correlación positiva leve, indicando que las series con más temporadas tienden a mantener
+    mayor popularidad. Esto puede deberse a que las series más exitosas se renuevan, acumulando tanto popularidad como temporadas.""")
+
+# ----------- TAB 2: Analisis de Exito-----------
+with tab2:
+    st.header("Análisis de Éxito")
+    st.write("""
+    Aquí se analiza qué tan exitoso es el contenido de Netflix a través de su popularidad, duración y su evolución en el tiempo.
+    """)
+
+    st.subheader("Distribución de popularidad por género")
+    fig_pop_gen = px.box(netflix, x="Genero", y="Popularidad", color="Genero",
+                         title="Distribución de popularidad por género")
+    fig_pop_gen.update_layout(template="plotly_dark", showlegend=False)
+    st.plotly_chart(fig_pop_gen, use_container_width=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Duración promedio por tipo")
+        fig_dur_tipo = px.bar(netflix.groupby("Tipo")["Duracion"].mean().reset_index(),
+                              x="Tipo", y="Duracion", color="Tipo",
+                              title="Duración promedio por tipo",
+                              color_discrete_sequence=["#E50914", "#B20710"])
+        fig_dur_tipo.update_layout(template="plotly_dark")
+        st.plotly_chart(fig_dur_tipo, use_container_width=True)
+
+    with col2:
+        st.subheader("Popularidad Promedio por Tipo de Contenido")
+        fig_dur_tipo = px.bar(netflix.groupby("Tipo")["Popularidad"].mean().reset_index(),
+                              x="Tipo", y="Popularidad", color="Tipo",
+                              title="Popularidad promedio por tipo",
+                              color_discrete_sequence=["#E50914", "#B20710"])
+        fig_dur_tipo.update_layout(template="plotly_dark")
+        st.plotly_chart(fig_dur_tipo, use_container_width=True)
+        
+    st.subheader(" Popularidad por país y década")
+    pop_pais = netflix.groupby(["Decada", "Pais"]).agg(popularidad_promedio=("Popularidad", "mean"),
+                                                       cantidad=("Titulo", "count")).reset_index()
+    fig_burbujas = px.scatter(pop_pais, x="Decada", y="Pais", size="cantidad",
+                              color="popularidad_promedio",
+                              color_continuous_scale="Reds",
+                              title="Popularidad promedio por país y década")
+    fig_burbujas.update_layout(template="plotly_dark")
+    st.plotly_chart(fig_burbujas, use_container_width=True)
